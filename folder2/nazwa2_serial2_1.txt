@@ -1,0 +1,4 @@
+result=fail
+wartosc1=result1
+wartosc2=result2
+wartosc3=result3
