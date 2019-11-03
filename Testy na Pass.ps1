@@ -20,6 +20,9 @@ $rozmiar_kolumn = 115
 # 2019.08.20 - 4h
 # 2019.08.20 - 1,5h - zmiana na lepsz¹ tabele
 # 2019.10.24 - 2h
+# 2019.10.28 - 2,5h - dodanie sortowanie po kolumnach
+
+$title = "Testy na Pass GUI wersja. 7D"
 
 #przechowuje dane pobrane z plików
 $Wynik = @{}
@@ -57,7 +60,7 @@ $dzien=get-date -UFormat "%Y-%m-%d"
 
 #Tworzenie okna programu
 $form = New-Object System.Windows.Forms.Form
-$form.Text="Testy na Pass GUI wersja. 7C"
+$form.Text=$title
 $form.Size=New-Object System.Drawing.Size(($Right_Row_Button+160),620)
 #$form.topmost = $true
 
@@ -106,6 +109,16 @@ $label6.Left=$Right_Row_Button
 $label6.Anchor="Left,Top"
 $form.Controls.Add($label6)
 
+#7 linia
+$label7=New-Object System.Windows.Forms.label
+$label7.Text="Aktualny tydzieñ: " + (get-date -UFormat %V)
+$label7.AutoSize=$True
+$label7.Top="425"
+$label7.Left=$Right_Row_Button
+$label7.Anchor="Left,Top"
+$form.Controls.Add($label7)
+
+
 #OKNO 1
 $listBox=New-Object System.Windows.Forms.Listbox
 $listBox.Location = New-Object System.Drawing.Size(10,55)
@@ -114,12 +127,86 @@ $listbox.HorizontalScrollbar = $true;
 $listBox.Font = New-Object System.Drawing.Font("Lucida Console",$wielkosc_czcionki_okna,[System.Drawing.FontStyle]::Regular)
 #$form.Controls.Add($listBox)
 
+
+
+
 #OKNO Z KOLUMNAMI
 $listView = New-Object System.Windows.Forms.ListView
 $ListView.Location = New-Object System.Drawing.Point(10, 55)
 $ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20),500)
 $ListView.View = [System.Windows.Forms.View]::Details
 $ListView.FullRowSelect = $true;
+
+
+#sortowanie kolumn
+
+#https://stackoverflow.com/questions/35871501/listview-sort-doesnt-work-onclick-powershell
+#https://www.soinside.com/question/qjdFNSnTeRzPA65VFQUHwN 
+$tmp = "
+function SortListView {
+    Param(
+        [System.Windows.Forms.ListView]$sender,
+        $column
+    )
+    $temp = $sender.Items | Foreach-Object { $_ }
+    $Script:SortingDescending = !$Script:SortingDescending
+    $sender.Items.Clear()
+    $sender.ShowGroups = $false
+    $sender.Sorting = 'none'
+    $sender.Items.AddRange(($temp | Sort-Object -Descending:$script:SortingDescending -Property @{ Expression={ $_.SubItems[$column].Text } }))
+}
+$ListView.add_ColumnClick({SortListView $this $_.Column})
+"
+
+#https://social.technet.microsoft.com/Forums/scriptcenter/de-DE/553f06bc-522c-4854-9e28-d0e219a789a6/powershell-and-systemwindowsformslistview?forum=ITCG
+
+# This is the custom comparer class string
+# copied from the MSDN article
+
+$comparerClassString = @"
+
+  using System;
+  using System.Windows.Forms;
+  using System.Drawing;
+  using System.Collections;
+
+  public class ListViewItemComparer : IComparer
+  {
+    private int col;
+    public ListViewItemComparer()
+    {
+      col = 0;
+    }
+    public ListViewItemComparer(int column)
+    {
+      col = column;
+    }
+    public int Compare(object x, object y)
+    {
+		int number_1, number_2;
+		if(Int32.TryParse(((ListViewItem)x).SubItems[col].Text,out number_1) && Int32.TryParse(((ListViewItem)y).SubItems[col].Text,out number_2))
+		{
+			return number_1.CompareTo(number_2);
+		}
+		else
+		{
+			return String.Compare(((ListViewItem)x).SubItems[col].Text, ((ListViewItem)y).SubItems[col].Text);
+		}
+    }
+  }
+
+"@
+
+# Add the comparer class
+
+Add-Type -TypeDefinition $comparerClassString -ReferencedAssemblies ('System.Windows.Forms', 'System.Drawing')
+
+# Add the event to the ListView ColumnClick event
+$ListView.add_ColumnClick({ $listView.ListViewItemSorter = New-Object ListViewItemComparer($_.Column)})
+
+
+
+
 $ListView.Font = New-Object System.Drawing.Font("Lucida Console",$wielkosc_czcionki_okna,[System.Drawing.FontStyle]::Regular)
 $form.Controls.Add($ListView)
 
@@ -219,7 +306,7 @@ $checkMe2.Size=New-Object System.Drawing.Size(100,30)
 $checkMe2.Text="Dopisuj wyniki"
 $checkMe2.TabIndex=1
 $checkMe2.Checked=$false
-$form.Controls.Add($checkMe2)
+#$form.Controls.Add($checkMe2)
 
 #TEXTBOX 1
 $textBox1 = New-Object System.Windows.Forms.TextBox
@@ -437,7 +524,7 @@ function GetList($sciezka1)
 
 			if($Result[$year][$week].Length -eq 0)
 			{
-				$Result[$year][$week] = @{"FPY"=$lista_first_pass.Length; "PY"=$lista_last_pass.Length ;"sum_pass"= $lista_pass.Length; "sum_test"= $znalezione_testy; "sum_moduly"= $ile_mod}
+				$Result[$year][$week] = @{"FPY"=$lista_first_pass.Length; "PY"=$lista_last_pass.Length ;"sum_pass"= $lista_pass.Length; "sum_test"= $znalezione_testy; "sum_moduly"= $ile_mod; "pliki_pass"= $lista_pass | Select-Object -Property Name; "pliki_fail"= $lista_fail | Select-Object -Property Name; "pliki_first_pass"=$lista_first_pass | Select-Object -Property Name; "pliki_last_pass"= $lista_last_pass | Select-Object -Property Name}
 				#write-host $Result[$year][$week]["tydzien"]
 			}
 			else
@@ -461,15 +548,9 @@ function Dzialaj()
 	write-host "Start"
 	zapis_konfiguracji
 	
-	#czy Dopisywaæ wyniki
-	IF($checkMe2.Checked -ne $true)
-	{
-		$global:Wynik = @{}
-	}
-	
 	foreach($path in (Get-ChildItem $sciezka))
 	{
-		write-host $path
+		write-host $path,$path.Name
 		if((Get-Item $path.FULLNAME) -is [System.IO.DirectoryInfo])
 		{
 			if($checkMe1.Checked){write-host $path.FULLNAME}
@@ -478,6 +559,12 @@ function Dzialaj()
 	}
 	
 	Odswiez
+	
+	if($checkMe1.Checked)
+	{
+		$Wynik | ConvertTo-JSON -Depth 4 | Set-Content -Path dump.json
+		#$Wynik | ForEach-OBJECT{ [pscustomobject]$_} | Export-CSV -Path "dump.csv"
+	}
 	 
 	$date = get-date
 	write-host "Koniec", $date
