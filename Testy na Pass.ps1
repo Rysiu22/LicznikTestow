@@ -8,7 +8,7 @@ $debug = 0
 #przciski, przesuniêcie rzêdu
 $Right_Row_Button = 800
 $wielkosc_czcionki_okna = 10
-$rozmiar_kolumn = 115
+$rozmiar_kolumn = 105
 
 
 
@@ -20,7 +20,7 @@ $rozmiar_kolumn = 115
 # 2019.08.20 - 4h
 # 2019.08.20 - 1,5h - zmiana na lepsz¹ tabele
 # 2019.10.24 - 2h
-# 2019.10.28 - 2,5h - dodanie sortowanie po kolumnach
+# 2019.10.28 - 1,5h - dodanie sortowanie po kolumnach
 
 $title = "Testy na Pass GUI wersja. 7D"
 
@@ -217,33 +217,45 @@ $LVcol1 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol1.TextAlign = $MyTextAlign
 $LVcol1.Text = "Folder"
 $LVcol1.Width = $rozmiar_kolumn
+
 $LVcol2 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol2.TextAlign = $MyTextAlign
 $LVcol2.Text = "Tydzieñ"
 $LVcol2.Width = $rozmiar_kolumn
+
 $LVcol3 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol3.TextAlign = $MyTextAlign
 $LVcol3.Text = "Rok"
+
 $LVcol4 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol4.TextAlign = $MyTextAlign
 $LVcol4.Text = "FPY - first pass yield"
+
 $LVcol5 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol5.TextAlign = $MyTextAlign
-$LVcol5.Text = "PY - pass yield"
+$LVcol5.Text = "FTT - first total test"
+
 $LVcol6 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol6.TextAlign = $MyTextAlign
-$LVcol6.Text = "Modu³ów Suma"
-$LVcol6.Width = $rozmiar_kolumn
+$LVcol6.Text = "PY - pass yield"
+
 $LVcol7 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol7.TextAlign = $MyTextAlign
-$LVcol7.Text = "Pass Suma"
+$LVcol7.Text = "Modu³ów Suma"
 $LVcol7.Width = $rozmiar_kolumn
+
 $LVcol8 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol8.TextAlign = $MyTextAlign
-$LVcol8.Text = "Testów Suma"
+$LVcol8.Text = "Pass Suma"
 $LVcol8.Width = $rozmiar_kolumn
 
-$ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVcol2, $LVcol3, $LVcol4,$LVcol5, $LVcol6, $LVcol7, $LVcol8)))
+$LVcol9 = New-Object System.Windows.Forms.ColumnHeader
+$LVcol9.TextAlign = $MyTextAlign
+$LVcol9.Text = "Testów Suma"
+$LVcol9.Width = $rozmiar_kolumn
+
+
+$ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVcol2, $LVcol3, $LVcol4, $LVcol5, $LVcol6, $LVcol7, $LVcol8, $LVcol9)))
 
 #dzia³a dobrze
 #$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@("ISA", "52", "2019", "0","1", "6", "7", "8")), -1)
@@ -489,6 +501,9 @@ function GetList($sciezka1)
 			#$lista=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME; $A -MATCH "FAILS=0" }  | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME; $A -MATCH "ERRORS=0" } )
 			#write-host "rok:$year tydzien:$week PY:", $lista.Length, "/", $Dict[$year].$week.Length
 
+			#FTT
+			$lista_first=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT="} | WHERE-OBJECT { $_.Name -MATCH "_0.txt" } )
+
 			#FPY
 			$lista_first_pass=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT=PASS"} | WHERE-OBJECT { $_.Name -MATCH "_0.txt" } )
 			
@@ -524,7 +539,7 @@ function GetList($sciezka1)
 
 			if($Result[$year][$week].Length -eq 0)
 			{
-				$Result[$year][$week] = @{"FPY"=$lista_first_pass.Length; "PY"=$lista_last_pass.Length ;"sum_pass"= $lista_pass.Length; "sum_test"= $znalezione_testy; "sum_moduly"= $ile_mod; "pliki_pass"= $lista_pass | Select-Object -Property Name; "pliki_fail"= $lista_fail | Select-Object -Property Name; "pliki_first_pass"=$lista_first_pass | Select-Object -Property Name; "pliki_last_pass"= $lista_last_pass | Select-Object -Property Name}
+				$Result[$year][$week] = @{"FPY"=$lista_first_pass.Length; "PY"=$lista_last_pass.Length ;"sum_pass"= $lista_pass.Length; "sum_test"= $znalezione_testy; "sum_moduly"= $ile_mod; "pliki_pass"= $lista_pass | Select-Object -Property Name; "pliki_fail"= $lista_fail | Select-Object -Property Name; "pliki_first_pass"=$lista_first_pass | Select-Object -Property Name; "pliki_last_pass"= $lista_last_pass | Select-Object -Property Name; "FTT"= $lista_first.Length}
 				#write-host $Result[$year][$week]["tydzien"]
 			}
 			else
@@ -618,7 +633,7 @@ function Odswiez()
 				#$listBox.Items.Add("$modul $week_f/$year FPY: "+ ($Wynik.$modul.$year.$week["FPY"].ToString("#0")).PadLeft($pad) + "   PY: "+ ($Wynik.$modul.$year.$week["PY"].ToString("#0")).PadLeft($pad) + " Suma mod: " + ($Wynik.$modul.$year.$week["sum_moduly"].ToString("#0")).PadLeft($pad) + " Suma pass: " + ($Wynik.$modul.$year.$week["sum_pass"].ToString("#0")).PadLeft($pad) + " Suma_testow: " + ($Wynik.$modul.$year.$week["sum_test"].ToString("#0")).PadLeft($pad) )
 
 				#wype³nanie tabeli
-				$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($modul, $week, $year, $Wynik.$modul.$year.$week["FPY"], $Wynik.$modul.$year.$week["PY"], $Wynik.$modul.$year.$week["sum_moduly"], $Wynik.$modul.$year.$week["sum_pass"], $Wynik.$modul.$year.$week["sum_test"])), -1)
+				$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($modul, $week, $year, $Wynik.$modul.$year.$week["FPY"], $Wynik.$modul.$year.$week["FTT"], $Wynik.$modul.$year.$week["PY"], $Wynik.$modul.$year.$week["sum_moduly"], $Wynik.$modul.$year.$week["sum_pass"], $Wynik.$modul.$year.$week["sum_test"])), -1)
 				#$ListViewItem.StateImageIndex = 0
 				$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))	
 			}
