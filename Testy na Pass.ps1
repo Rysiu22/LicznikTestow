@@ -9,6 +9,7 @@ $debug = 0
 $Right_Row_Button = 800
 $wielkosc_czcionki_okna = 10
 $rozmiar_kolumn = 105
+$wysokosc_okna = 500
 
 
 
@@ -21,11 +22,12 @@ $rozmiar_kolumn = 105
 # 2019.08.20 - 1,5h - zmiana na lepsz¹ tabele
 # 2019.10.24 - 2h
 # 2019.10.28 - 1,5h - dodanie sortowanie po kolumnach
+# 2019.11.07 - 4h - FTT, export i import
 
-$title = "Testy na Pass GUI wersja. 7D"
+$title = "Testy na Pass GUI wersja. 7E"
 
 #przechowuje dane pobrane z plików
-$Wynik = @{}
+$Wynik = [ordered]@{}
 
 $regPath="HKCU:\SOFTWARE\Rysiu22\TnP7C"
 $name="path"
@@ -59,63 +61,114 @@ ELSE
 $dzien=get-date -UFormat "%Y-%m-%d"
 
 #Tworzenie okna programu
+Add-Type -AssemblyName System.Windows.Forms
 $form = New-Object System.Windows.Forms.Form
 $form.Text=$title
-$form.Size=New-Object System.Drawing.Size(($Right_Row_Button+160),620)
+$form.Size=New-Object System.Drawing.Size(($Right_Row_Button+200), ($wysokosc_okna+120))
+$form.StartPosition='CenterScreen'
 #$form.topmost = $true
+
+#wczytuje rozmiar czcionek
+$MyFont = New-Object System.Drawing.Font("Lucida Console",$wielkosc_czcionki_okna,[System.Drawing.FontStyle]::Regular)
+#$MyFont = New-Object System.Drawing.Font("Courier New",$wielkosc_czcionki_okna,[System.Drawing.FontStyle]::Regular)
+
+#MENU BAR
+#https://social.technet.microsoft.com/Forums/en-US/52debd7a-1f2b-470e-9259-c898563bb3ae/tool-strip-menu-item?forum=ITCG
+$MenuBar = New-Object System.Windows.Forms.MenuStrip
+$Form.Controls.Add($MenuBar)
+$UserGMenu1 = New-Object System.Windows.Forms.ToolStripMenuItem
+$UserGMenu2 = New-Object System.Windows.Forms.ToolStripMenuItem
+$MenuBar.Items.Add($UserGMenu1)
+$MenuBar.Items.Add($UserGMenu2)
+$UserGMenu1.Text = "&Plik"
+$UserGMenu2.Text = "&Akcja"
+$UserGMenu1.Font = $MyFont
+$UserGMenu2.Font = $MyFont
+
+$DropDownGUsers1Dict=@{'Exportuj do JSON'={dojson}; 'Importuj z JSON'={zjson}}
+ForEach ($GroupUserKey in ($DropDownGUsers1Dict.keys | Sort-Object)) {
+	#Write-Host $GroupUserKey, $DropDownGUsers1Dict[$GroupUserKey]
+	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
+	$GroupValue.Text = $GroupUserKey
+	# name the control
+	$Groupvalue.Name = $GroupUserKey
+	$UserGMenu1.DropDownItems.Add($GroupValue)
+	# use name to identify control
+	$GroupValue.Add_Click( $DropDownGUsers1Dict[$GroupUserKey] )
+}
+
+$DropDownGUsers2Dict=@{'Odœwie¿'={Odswiez}; 'Generuj'={Dzialaj}; 'Zmieñ Folder'={ChangeFolder} }
+
+ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
+	#Write-Host $GroupUserKey, $DropDownGUsers2Dict[$GroupUserKey]
+	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
+	$GroupValue.Text = $GroupUserKey
+	# name the control
+	$Groupvalue.Name = $GroupUserKey
+	$UserGMenu2.DropDownItems.Add($GroupValue)
+	# use name to identify control
+	$GroupValue.Add_Click( $DropDownGUsers2Dict[$GroupUserKey] )
+}
+
 
 #1 linia
 $label1=New-Object System.Windows.Forms.label
 $label1.Text="..."
 $label1.AutoSize=$True
-$label1.Top="15"
+$label1.Top="30"
 $label1.Left="10"
 $label1.Anchor="Left,Top"
+$label1.Font = $MyFont
 $form.Controls.Add($label1)
 
 #2 linia
 $label2=New-Object System.Windows.Forms.label
 $label2.Text="Rok"
 $label2.AutoSize=$True
-$label2.Top="255"
+$label2.Top="55"
 $label2.Left=($Right_Row_Button+10)
 $label2.Anchor="Left,Top"
+$label2.Font = $MyFont
 $form.Controls.Add($label2)
 
 #4 linia
 $label2=New-Object System.Windows.Forms.label
 $label2.Text="Od tygodnia"
 $label2.AutoSize=$True
-$label2.Top="305"
+$label2.Top="105"
 $label2.Left=$Right_Row_Button
 $label2.Anchor="Left,Top"
+$label2.Font = $MyFont
 $form.Controls.Add($label2)
 
 #5 linia
 $label2=New-Object System.Windows.Forms.label
 $label2.Text="Do tygodnia"
 $label2.AutoSize=$True
-$label2.Top="355"
+$label2.Top="155"
 $label2.Left=$Right_Row_Button
 $label2.Anchor="Left,Top"
+$label2.Font = $MyFont
 $form.Controls.Add($label2)
 
 #6 linia
 $label6=New-Object System.Windows.Forms.label
-$label6.Text="Wyników: 0"
+$label6.Text="£¹cznie wyników: 0"
 $label6.AutoSize=$True
-$label6.Top="405"
+$label6.Top="205"
 $label6.Left=$Right_Row_Button
 $label6.Anchor="Left,Top"
+$label6.Font = $MyFont
 $form.Controls.Add($label6)
 
 #7 linia
 $label7=New-Object System.Windows.Forms.label
 $label7.Text="Aktualny tydzieñ: " + (get-date -UFormat %V)
 $label7.AutoSize=$True
-$label7.Top="425"
+$label7.Top="225"
 $label7.Left=$Right_Row_Button
 $label7.Anchor="Left,Top"
+$label7.Font = $MyFont
 $form.Controls.Add($label7)
 
 
@@ -124,7 +177,7 @@ $listBox=New-Object System.Windows.Forms.Listbox
 $listBox.Location = New-Object System.Drawing.Size(10,55)
 $listBox.Size= New-Object System.Drawing.Size(($Right_Row_Button - 20),100)
 $listbox.HorizontalScrollbar = $true;
-$listBox.Font = New-Object System.Drawing.Font("Lucida Console",$wielkosc_czcionki_okna,[System.Drawing.FontStyle]::Regular)
+$listBox.Font = $MyFont
 #$form.Controls.Add($listBox)
 
 
@@ -133,7 +186,7 @@ $listBox.Font = New-Object System.Drawing.Font("Lucida Console",$wielkosc_czcion
 #OKNO Z KOLUMNAMI
 $listView = New-Object System.Windows.Forms.ListView
 $ListView.Location = New-Object System.Drawing.Point(10, 55)
-$ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20),500)
+$ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20),$wysokosc_okna)
 $ListView.View = [System.Windows.Forms.View]::Details
 $ListView.FullRowSelect = $true;
 
@@ -207,7 +260,7 @@ $ListView.add_ColumnClick({ $listView.ListViewItemSorter = New-Object ListViewIt
 
 
 
-$ListView.Font = New-Object System.Drawing.Font("Lucida Console",$wielkosc_czcionki_okna,[System.Drawing.FontStyle]::Regular)
+$ListView.Font = $MyFont
 $form.Controls.Add($ListView)
 
 $MyTextAlign = [System.Windows.Forms.HorizontalAlignment]::Right;
@@ -221,7 +274,6 @@ $LVcol1.Width = $rozmiar_kolumn
 $LVcol2 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol2.TextAlign = $MyTextAlign
 $LVcol2.Text = "Tydzieñ"
-$LVcol2.Width = $rozmiar_kolumn
 
 $LVcol3 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol3.TextAlign = $MyTextAlign
@@ -268,47 +320,25 @@ $ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVc
 #	$item = New-Object System.Windows.Forms.ListviewItem($array)
 #	$listView.Items.Add($item)}
 
+
+#BUTTON
 #GENERUJ
-$generate=New-Object System.Windows.Forms.Button
-$generate.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),55)
-$generate.Size=New-Object System.Drawing.Size(100,30)
-$generate.Text="Generuj"
-$generate.add_click({Dzialaj})
-$form.Controls.Add($generate)
-
-#FOLDER
-$locate=New-Object System.Windows.Forms.Button
-$locate.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),105)
-$locate.Size=New-Object System.Drawing.Size(100,30)
-$locate.Text="Folder"
-$locate.add_click({ChangeFolder})
-$form.Controls.Add($locate)
-
-#Odœwie¿
-$refresh=New-Object System.Windows.Forms.Button
-$refresh.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),155)
-$refresh.Size=New-Object System.Drawing.Size(100,30)
-$refresh.Text="Odswiez"
-$refresh.add_click({Odswiez})
-$form.Controls.Add($refresh)
-
-#Zapisz
-$zapisz=New-Object System.Windows.Forms.Button
-$zapisz.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),205)
-$zapisz.Size=New-Object System.Drawing.Size(100,30)
-$zapisz.Text="Zapisz"
-$zapisz.add_click({Zapisz})
-$zapisz.Enabled = $false;
-$form.Controls.Add($zapisz)
+#$generate=New-Object System.Windows.Forms.Button
+#$generate.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),55)
+#$generate.Size=New-Object System.Drawing.Size(100,30)
+#$generate.Text="Generuj"
+#$generate.add_click({Dzialaj})
+#$form.Controls.Add($generate)
 
 
 #CHECKBOX 1
 $checkMe1=New-Object System.Windows.Forms.CheckBox
-$checkMe1.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),15)
+$checkMe1.Location=New-Object System.Drawing.Size(($Right_Row_Button+210),25)
 $checkMe1.Size=New-Object System.Drawing.Size(100,30)
 $checkMe1.Text="Debug"
 $checkMe1.TabIndex=1
 $checkMe1.Checked=$false
+$checkMe1.Font = $MyFont
 $form.Controls.Add($checkMe1)
 
 #CHECKBOX 2
@@ -318,27 +348,33 @@ $checkMe2.Size=New-Object System.Drawing.Size(100,30)
 $checkMe2.Text="Dopisuj wyniki"
 $checkMe2.TabIndex=1
 $checkMe2.Checked=$false
+$checkMe2.Font = $MyFont
 #$form.Controls.Add($checkMe2)
+
+$textBoxPadingRight = 110
 
 #TEXTBOX 1
 $textBox1 = New-Object System.Windows.Forms.TextBox
-$textBox1.Location = New-Object System.Drawing.Point(($Right_Row_Button+70),255)
+$textBox1.Location = New-Object System.Drawing.Point(($Right_Row_Button+$textBoxPadingRight),55)
 $textBox1.Size = New-Object System.Drawing.Size(40,30)
 $textBox1.Text=$testRok
+$textBox1.Font = $MyFont
 $form.Controls.Add($textBox1)
 
 #TEXTBOX 2
 $textBox2 = New-Object System.Windows.Forms.TextBox
-$textBox2.Location = New-Object System.Drawing.Point(($Right_Row_Button+70),305)
+$textBox2.Location = New-Object System.Drawing.Point(($Right_Row_Button+$textBoxPadingRight),105)
 $textBox2.Size = New-Object System.Drawing.Size(40,30)
 $textBox2.Text=$od_t
+$textBox2.Font = $MyFont
 $form.Controls.Add($textBox2)
 
 #TEXTBOX 3
 $textBox3 = New-Object System.Windows.Forms.TextBox
-$textBox3.Location = New-Object System.Drawing.Point(($Right_Row_Button+70),355)
+$textBox3.Location = New-Object System.Drawing.Point(($Right_Row_Button+$textBoxPadingRight),155)
 $textBox3.Size = New-Object System.Drawing.Size(40,30)
 $textBox3.Text=$do_t
+$textBox3.Font = $MyFont
 $form.Controls.Add($textBox3)
 
 
@@ -557,11 +593,109 @@ function GetList($sciezka1)
 	return ,$Result
 }
 
+
+#https://stackoverflow.com/questions/40495248/create-hashtable-from-json
+#rekurencyjny poprawny import zmiennych
+#[CmdletBinding]
+function Get-FromJson
+{
+    param(
+        [Parameter(Mandatory=$true, Position=1)]
+        [string]$Path
+    )
+
+    function Get-Value {
+        param( $value )
+
+        $result = $null
+        if ( $value -is [System.Management.Automation.PSCustomObject] )
+        {
+            Write-Verbose "Get-Value: value is PSCustomObject"
+            $result = @{}
+            $value.psobject.properties | ForEach-Object { 
+                $result[$_.Name] = Get-Value -value $_.Value
+				#write-host "-" $_.Name
+            }
+        }
+        elseif ($value -is [System.Object[]])
+        {
+            $list = New-Object System.Collections.ArrayList
+            Write-Verbose "Get-Value: value is Array"
+            $value | ForEach-Object {
+                $list.Add((Get-Value -value $_)) | Out-Null
+            }
+            $result = $list
+        }
+        else
+        {
+            Write-Verbose "Get-Value: value is type: $($value.GetType())"
+            $result = $value
+        }
+        return $result
+    }
+
+
+    if (Test-Path $Path)
+    {
+        $json = Get-Content $Path -Raw
+    }
+    else
+    {
+        $json = '{}'
+    }
+
+    $hashtable = Get-Value -value (ConvertFrom-Json $json)
+
+    return $hashtable
+}
+
+#https://gallery.technet.microsoft.com/scriptcenter/GUI-popup-FileSaveDialog-813a4966
+function dojson()
+{
+    $openDiag=New-Object System.Windows.Forms.savefiledialog
+	$openDiag.initialDirectory = [System.IO.Directory]::GetCurrentDirectory()
+	$openDiag.filter = "Log Files|*.json|All Files|*.*" 
+    #otwieranie ostatnio wybrany folder
+    $result=$openDiag.ShowDialog()
+    if($result -eq "OK")
+    {
+	    #[System.Windows.Forms.MessageBox]::Show("Ustawiono: "+$openDiag.filename,'plik')
+		#$Wynik | Select-Object -Property * | ConvertTo-JSON -Depth 4 | Set-Content -Path $openDiag.filename
+		$Wynik | ConvertTo-JSON -Depth 4 | Set-Content -Path $openDiag.filename
+		#$Wynik | ForEach-OBJECT{ [pscustomobject]$_} | Export-CSV -Path "dump.csv"
+    }
+}
+
+#https://community.idera.com/database-tools/powershell/powertips/b/tips/posts/using-open-file-dialogs
+function zjson()
+{
+    $openDiag=New-Object System.Windows.Forms.OpenFileDialog
+	$openDiag.Multiselect = $false
+	$openDiag.initialDirectory = [System.IO.Directory]::GetCurrentDirectory()
+	$openDiag.filter = "Log Files|*.json|All Files|*.*" 
+    #otwieranie ostatnio wybrany folder
+    $result=$openDiag.ShowDialog()
+    if($result -eq "OK")
+    {
+	    #[System.Windows.Forms.MessageBox]::Show("Ustawiono: "+$openDiag.filename,'plik')
+		#$script:Wynik = (Get-Content -Raw -Path $openDiag.filename | ConvertFrom-Json)
+		#write-host ($Wynik | ConvertTo-JSON -Depth 4)
+		
+		$script:Wynik = Get-FromJson $openDiag.filename
+		
+		Odswiez
+	}
+}
+
+
 #akcje Generowania
 function Dzialaj()
 {
 	write-host "Start"
 	zapis_konfiguracji
+	
+	#zerowanie zmiennej
+	$script:Wynik = [ordered]@{}
 	
 	foreach($path in (Get-ChildItem $sciezka))
 	{
@@ -574,13 +708,7 @@ function Dzialaj()
 	}
 	
 	Odswiez
-	
-	if($checkMe1.Checked)
-	{
-		$Wynik | ConvertTo-JSON -Depth 4 | Set-Content -Path dump.json
-		#$Wynik | ForEach-OBJECT{ [pscustomobject]$_} | Export-CSV -Path "dump.csv"
-	}
-	 
+
 	$date = get-date
 	write-host "Koniec", $date
 }
@@ -607,22 +735,52 @@ function zapis_konfiguracji()
 function Odswiez()
 {
 	zapis_konfiguracji
+	
+	#odczytanie zmiennych w oknach
+	$testRok=$textBox1.Text
+	$od_t=$textBox2.Text
+	$do_t=$textBox3.Text
 
 	#odœwierzenie listy
 	$listBox.Items.Clear()
 	$listView.Items.Clear()
 	
+	$label6.Text="£¹cznie wyników: " + ($Wynik.keys).COUNT
+	$label6.Refresh()
+
 	foreach($modul in ($Wynik.keys))
 	{
-		if($checkMe1.Checked){write-host $modul}
+		if($checkMe1.Checked){write-host "modul", $modul}
 		
 		foreach($year in ($Wynik[$modul].keys | Sort-Object {[double]$_}))
 		{
-			#write-host "key{$modul : {$year : ... }} count value:", $Wynik[$modul][$year].Length
-			
+			if($checkMe1.Checked){write-host "key{$modul : {$year : ... }} count value:", $Wynik[$modul][$year].Length}
+
 			foreach($week in ($Wynik[$modul][$year].keys | Sort-Object {[double]$_}))
 			{
-				if($checkMe1.Checked){write-host "key{$modul : {$year : {$week : ... }}} count value:", $Wynik[$modul][$year].$week.Length, $Wynik.$modul.$year.$week["FPY"],$Wynik.$modul.$year.$week["PY"],$Wynik.$modul.$year.$week["sum"]} 
+				if($checkMe1.Checked){write-host "key{$modul : {$year : {$week : ... }}} count value:", $Wynik[$modul][$year].$week.Length, $Wynik.$modul.$year.$week["FPY"],$Wynik.$modul.$year.$week["PY"],$Wynik.$modul.$year.$week["sum"]}
+				
+				#jeœli rok = 0 to pomija wszelkie restrykcjie czasowe
+				if($testRok -ne "0")
+				{
+					#restrykcje czasowe: rok
+					if($year -ne $testRok)
+					{
+						continue
+					}
+			
+					#restrykcje czasowe: tygodnie
+					if([convert]::ToInt32($week,10) -lt $od_t)
+					{
+						#write-host [convert]::ToInt32($plik_tydzien,10) , "-lt", $od_t
+						continue
+					}
+					if([convert]::ToInt32($week,10) -gt $do_t)
+					{
+						#write-host [convert]::ToInt32($plik_tydzien,10), "-gt", $do_t
+						continue
+					}
+				}
 				
 				#latwe do odczytania w kodzie
 				#$listBox.Items.Add("$week/$year  $modul   FPY: "+ $Wynik.$modul.$year.$week["FPY"] + "   PY: "+ $Wynik.$modul.$year.$week["PY"] + " Suma pass: " + $Wynik.$modul.$year.$week["sum_pass"] + " Suma mod: " + $Wynik.$modul.$year.$week["sum_moduly"] + " Suma_testow: " + $Wynik.$modul.$year.$week["sum_test"] )
@@ -641,22 +799,14 @@ function Odswiez()
 		
 	}
 	
-	$label6.Text="Wyników: " + ($ListView.Items).COUNT
-	$label6.Refresh()
+	#$label6.Text="Wyników: " + ($ListView.Items).COUNT
+	#$label6.Refresh()
 	
 	if(($Wynik.keys).COUNT -eq 0)
 	{
 		UpdateList
 		
 	}
-}
-
-
-function Zapisz()
-{
-
-	[System.Windows.Forms.MessageBox]::Show("Jeszcze nie dzia³a")
-
 }
 
 function UpdateList()
