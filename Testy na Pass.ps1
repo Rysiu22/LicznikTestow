@@ -94,32 +94,40 @@ $Form.Controls.Add($MenuBar)
 $UserGMenu1 = New-Object System.Windows.Forms.ToolStripMenuItem
 $UserGMenu2 = New-Object System.Windows.Forms.ToolStripMenuItem
 $UserGMenu3 = New-Object System.Windows.Forms.ToolStripMenuItem
+$UserGMenu4 = New-Object System.Windows.Forms.ToolStripMenuItem
+$UserGMenu5 = New-Object System.Windows.Forms.ToolStripMenuItem
 $MenuBar.Items.Add($UserGMenu1)
 $MenuBar.Items.Add($UserGMenu2)
 $MenuBar.Items.Add($UserGMenu3)
+$MenuBar.Items.Add($UserGMenu4)
+$MenuBar.Items.Add($UserGMenu5)
 $UserGMenu1.Text = "&Plik"
 $UserGMenu2.Text = "&Akcja"
 $UserGMenu3.Text = "&Wzorzec Nazw"
+$UserGMenu4.Text = "&Okno"
+$UserGMenu5.Text = "&Info"
 $UserGMenu1.Font = $MyFont
 $UserGMenu2.Font = $MyFont
 $UserGMenu3.Font = $MyFont
+$UserGMenu4.Font = $MyFont
+$UserGMenu5.Font = $MyFont
 
 $DropDownGUsers1Dict=@{
-	'1. Exportuj do GZip'={dojson -Format "gz"}; 
-	'2. Exportuj do JSON'={dojson -Format "json"}; 
-	'3. Exportuj do base64'={dojson -Format "base64"}; 
+	'2 Exportuj do GZip'={dojson -Format "gz"}; 
+	'3 Exportuj do JSON'={dojson -Format "json"}; 
+	'4 Exportuj do base64'={dojson -Format "base64"}; 
 	
-	'4. Importuj z GZip'={zjson -Format "gz"}; 
-	'5. Importuj z JSON'={zjson -Format "json"}; 
-	'6. Importuj z base64'={zjson -Format "base64"}; 
+	'5 Importuj z GZip'={zjson -Format "gz"}; 
+	'6 Importuj z JSON'={zjson -Format "json"}; 
+	'7 Importuj z base64'={zjson -Format "base64"}; 
 
-	"7. Zamknij"={$form.Close();}
+	"8 Zamknij"={$form.Close();}
 }
 
 ForEach ($GroupUserKey in ($DropDownGUsers1Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers1Dict[$GroupUserKey]
 	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
-	$GroupValue.Text = $GroupUserKey.Substring(3)
+	$GroupValue.Text = $GroupUserKey.Substring(2)
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
 	$UserGMenu1.DropDownItems.Add($GroupValue)
@@ -128,15 +136,15 @@ ForEach ($GroupUserKey in ($DropDownGUsers1Dict.keys | Sort-Object)) {
 }
 
 $DropDownGUsers2Dict=@{
-	'1. Odœwie¿'={Odswiez}; 
-	'2. £aduj'={Dzialaj}; 
-	'3. Zmieñ Folder'={ChangeFolder}
+	'1 Odœwie¿'={Odswiez}; 
+	'2 £aduj'={Dzialaj}; 
+	'3 Zmieñ Folder'={ChangeFolder}
 }
 
 ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers2Dict[$GroupUserKey]
 	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
-	$GroupValue.Text = $GroupUserKey.Substring(3)
+	$GroupValue.Text = $GroupUserKey.Substring(2)
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
 	$UserGMenu2.DropDownItems.Add($GroupValue)
@@ -145,22 +153,22 @@ ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
 }
 
 $DropDownGUsers3Dict=@{
-	'1. Wszystko: .*' = {
+	'1 Wszystko: .*' = {
 		$script:myRegxFile=".*"; 
 		$label8.Text="wzorzec: ",$myRegxFile; 
 		$label8.Refresh()
 		};
-	"2. Karta: $wzorzec_karty" = {
+	"2 Karta: $wzorzec_karty" = {
 		$script:myRegxFile=$wzorzec_karty; 
 		$label8.Text="wzorzec: ",$myRegxFile; 
 		$label8.Refresh()
 		};
-	"3. Wzmacniacz: $wzorzec_wzmacniacza" = {
+	"3 Wzmacniacz: $wzorzec_wzmacniacza" = {
 		$script:myRegxFile=$wzorzec_wzmacniacza; 
 		$label8.Text="wzorzec: ",$myRegxFile; 
 		$label8.Refresh()
 		};
-	'4. W³asny' = {
+	'4 W³asny' = {
 		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxFile; 
 		if($tmp){$script:myRegxFile=$tmp}; 
 		$label8.Text="wzorzec: ",$myRegxFile; 
@@ -171,12 +179,42 @@ $DropDownGUsers3Dict=@{
 ForEach ($GroupUserKey in ($DropDownGUsers3Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers2Dict[$GroupUserKey]
 	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
-	$GroupValue.Text = $GroupUserKey.Substring(3)
+	$GroupValue.Text = $GroupUserKey.Substring(2)
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
 	$UserGMenu3.DropDownItems.Add($GroupValue)
 	# use name to identify control
 	$GroupValue.Add_Click( $DropDownGUsers3Dict[$GroupUserKey] )
+}
+
+$DropDownGUsers4Dict=@{
+	'1 Zawsze na wieszku'={$form.topmost = -not $form.topmost};
+}
+
+ForEach ($GroupUserKey in ($DropDownGUsers4Dict.keys | Sort-Object)) {
+	#Write-Host $GroupUserKey, $DropDownGUsers1Dict[$GroupUserKey]
+	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
+	$GroupValue.Text = $GroupUserKey.Substring(2)
+	# name the control
+	$Groupvalue.Name = $GroupUserKey
+	$UserGMenu4.DropDownItems.Add($GroupValue)
+	# use name to identify control
+	$GroupValue.Add_Click( $DropDownGUsers4Dict[$GroupUserKey] )
+}
+
+$DropDownGUsers5Dict=@{
+	'1 Strona projektu'={Start-Process "https://github.com/Rysiu22/LicznikTestow"};
+}
+
+ForEach ($GroupUserKey in ($DropDownGUsers5Dict.keys | Sort-Object)) {
+	#Write-Host $GroupUserKey, $DropDownGUsers1Dict[$GroupUserKey]
+	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
+	$GroupValue.Text = $GroupUserKey.Substring(2)
+	# name the control
+	$Groupvalue.Name = $GroupUserKey
+	$UserGMenu5.DropDownItems.Add($GroupValue)
+	# use name to identify control
+	$GroupValue.Add_Click( $DropDownGUsers5Dict[$GroupUserKey] )
 }
 
 #1 linia
