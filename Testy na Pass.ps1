@@ -204,6 +204,12 @@ ForEach ($GroupUserKey in ($DropDownGUsers4Dict.keys | Sort-Object)) {
 
 $DropDownGUsers5Dict=@{
 	'1 Strona projektu'={Start-Process "https://github.com/Rysiu22/LicznikTestow"};
+	'2 Pobierz Aktualn¹ wersje'={
+		if( $script:MyInvocation.MyCommand.Path ){Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Rysiu22/LicznikTestow/master/Testy%20na%20Pass.ps1" -OutFile $script:MyInvocation.MyCommand.Path};
+		$form.Close();
+		};
+	
+	
 }
 
 ForEach ($GroupUserKey in ($DropDownGUsers5Dict.keys | Sort-Object)) {
