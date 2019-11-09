@@ -11,7 +11,16 @@ $wielkosc_czcionki_okna = 10
 $rozmiar_kolumn = 105
 $wysokosc_okna = 500
 
+#wyjaœnienie wzorca (wielkoœæ liter ma znaczenie):
+#. jeden dowolny znak
+#\. kropka
+#\w+ znaki alfabetyczne, conajmniej jeden
+#\d+ cyfry, conajmniej jedna
+#\d{10} dok³adnie 10 cyfr
+$wzorzec_karty = "\w+\d+-\d+_B\d+W\d+S\d+_\d+\.txt"
+$wzorzec_wzmacniacza = "10P000ABT\d+_AMMAWZ\d{10}_\d+\.txt"
 
+$ile_lini_czytac = 10
 
 
 #danych poni¿ej nie edytowaæ
@@ -24,24 +33,26 @@ $wysokosc_okna = 500
 # 2019.10.28 - 1,5h - dodanie sortowanie po kolumnach
 # 2019.11.07 - 4h - FTT, export i import
 # 2019.11.08 - 4h
-# 2019.11.09 - 1h
+# 2019.11.09 - 9,5h - wczytanie kompletnych danych z nag³óka i generowanie z nich danych, filtrowanie nazw tylko przy generowaniu, od 13:00 do 22:30
 
-$title = "Testy na Pass GUI wersja. 7E"
+$title = "Testy na Pass GUI wersja. 7F"
 
 #przechowuje dane pobrane z plików
 $Wynik = [ordered]@{}
 
-$regPath="HKCU:\SOFTWARE\Rysiu22\TnP7C"
+$regPath="HKCU:\SOFTWARE\Rysiu22\TnP7F"
 $name="path"
 $regYear="rok"
 $regPastWeek="od_tygodnia"
 $regToWeek="do_tygodnia"
+$regMyRegxFile="filter_plikow"
 
 #folder z logami
 $sciezka=[System.IO.Path]::GetDirectoryName($script:MyInvocation.MyCommand.Path) #aktualna œcie¿ka
 $testRok="2019"
 $od_t="1"
 $do_t="52"
+$myRegxFile=".*"
 
 #wczytanie okienek
 [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms") | Out-Null
@@ -53,6 +64,8 @@ IF( (Test-Path $regPath))
 	$testRok=(Get-Item -Path $regPath).GetValue($regYear)
 	$od_t=(Get-Item -Path $regPath).GetValue($regPastWeek)
 	$do_t=(Get-Item -Path $regPath).GetValue($regToWeek)
+	$myRegxFile=(Get-Item -Path $regPath).GetValue($regMyRegxFile)
+	
 }
 ELSE
 {
@@ -66,7 +79,7 @@ $dzien=get-date -UFormat "%Y-%m-%d"
 Add-Type -AssemblyName System.Windows.Forms
 $form = New-Object System.Windows.Forms.Form
 $form.Text=$title
-$form.Size=New-Object System.Drawing.Size(($Right_Row_Button+200), ($wysokosc_okna+120))
+$form.Size=New-Object System.Drawing.Size(($Right_Row_Button+300), ($wysokosc_okna+120))
 $form.StartPosition='CenterScreen'
 #$form.topmost = $true
 
@@ -80,19 +93,33 @@ $MenuBar = New-Object System.Windows.Forms.MenuStrip
 $Form.Controls.Add($MenuBar)
 $UserGMenu1 = New-Object System.Windows.Forms.ToolStripMenuItem
 $UserGMenu2 = New-Object System.Windows.Forms.ToolStripMenuItem
+$UserGMenu3 = New-Object System.Windows.Forms.ToolStripMenuItem
 $MenuBar.Items.Add($UserGMenu1)
 $MenuBar.Items.Add($UserGMenu2)
+$MenuBar.Items.Add($UserGMenu3)
 $UserGMenu1.Text = "&Plik"
 $UserGMenu2.Text = "&Akcja"
+$UserGMenu3.Text = "&Wzorzec Nazw"
 $UserGMenu1.Font = $MyFont
 $UserGMenu2.Font = $MyFont
+$UserGMenu3.Font = $MyFont
 
-$DropDownGUsers1Dict=@{'1. Exportuj do JSON'={dojson}; '2. Importuj z JSON'={zjson}; "3. Zamknij"={$form.Close();}}
+$DropDownGUsers1Dict=@{
+	'1. Exportuj do GZip'={dojson -Format "gz"}; 
+	'2. Exportuj do JSON'={dojson -Format "json"}; 
+	'3. Exportuj do base64'={dojson -Format "base64"}; 
+	
+	'4. Importuj z GZip'={zjson -Format "gz"}; 
+	'5. Importuj z JSON'={zjson -Format "json"}; 
+	'6. Importuj z base64'={zjson -Format "base64"}; 
+
+	"7. Zamknij"={$form.Close();}
+}
 
 ForEach ($GroupUserKey in ($DropDownGUsers1Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers1Dict[$GroupUserKey]
 	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
-	$GroupValue.Text = $GroupUserKey
+	$GroupValue.Text = $GroupUserKey.Substring(3)
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
 	$UserGMenu1.DropDownItems.Add($GroupValue)
@@ -100,12 +127,16 @@ ForEach ($GroupUserKey in ($DropDownGUsers1Dict.keys | Sort-Object)) {
 	$GroupValue.Add_Click( $DropDownGUsers1Dict[$GroupUserKey] )
 }
 
-$DropDownGUsers2Dict=@{'1. Odœwie¿'={Odswiez}; '2. Generuj'={Dzialaj}; '3. Zmieñ Folder'={ChangeFolder} }
+$DropDownGUsers2Dict=@{
+	'1. Odœwie¿'={Odswiez}; 
+	'2. £aduj'={Dzialaj}; 
+	'3. Zmieñ Folder'={ChangeFolder}
+}
 
 ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers2Dict[$GroupUserKey]
 	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
-	$GroupValue.Text = $GroupUserKey
+	$GroupValue.Text = $GroupUserKey.Substring(3)
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
 	$UserGMenu2.DropDownItems.Add($GroupValue)
@@ -113,6 +144,40 @@ ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
 	$GroupValue.Add_Click( $DropDownGUsers2Dict[$GroupUserKey] )
 }
 
+$DropDownGUsers3Dict=@{
+	'1. Wszystko: .*' = {
+		$script:myRegxFile=".*"; 
+		$label8.Text="wzorzec: ",$myRegxFile; 
+		$label8.Refresh()
+		};
+	"2. Karta: $wzorzec_karty" = {
+		$script:myRegxFile=$wzorzec_karty; 
+		$label8.Text="wzorzec: ",$myRegxFile; 
+		$label8.Refresh()
+		};
+	"3. Wzmacniacz: $wzorzec_wzmacniacza" = {
+		$script:myRegxFile=$wzorzec_wzmacniacza; 
+		$label8.Text="wzorzec: ",$myRegxFile; 
+		$label8.Refresh()
+		};
+	'4. W³asny' = {
+		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxFile; 
+		if($tmp){$script:myRegxFile=$tmp}; 
+		$label8.Text="wzorzec: ",$myRegxFile; 
+		$label8.Refresh()
+		};
+}
+
+ForEach ($GroupUserKey in ($DropDownGUsers3Dict.keys | Sort-Object)) {
+	#Write-Host $GroupUserKey, $DropDownGUsers2Dict[$GroupUserKey]
+	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
+	$GroupValue.Text = $GroupUserKey.Substring(3)
+	# name the control
+	$Groupvalue.Name = $GroupUserKey
+	$UserGMenu3.DropDownItems.Add($GroupValue)
+	# use name to identify control
+	$GroupValue.Add_Click( $DropDownGUsers3Dict[$GroupUserKey] )
+}
 
 #1 linia
 $label1=New-Object System.Windows.Forms.label
@@ -173,6 +238,16 @@ $label7.Left=$Right_Row_Button
 $label7.Anchor="Left,Top"
 $label7.Font = $MyFont
 $form.Controls.Add($label7)
+
+#7 linia
+$label8=New-Object System.Windows.Forms.label
+$label8.Text="wzorzec: ",$myRegxFile
+$label8.AutoSize=$True
+$label8.Top="255"
+$label8.Left=$Right_Row_Button
+$label8.Anchor="Left,Top"
+$label8.Font = $MyFont
+$form.Controls.Add($label8)
 
 #OKNO Z KOLUMNAMI
 $listView = New-Object System.Windows.Forms.ListView
@@ -336,7 +411,7 @@ $form.Controls.Add($checkMe1)
 $checkMe2=New-Object System.Windows.Forms.CheckBox
 $checkMe2.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),325)
 $checkMe2.Size=New-Object System.Drawing.Size(150,30)
-$checkMe2.Text="Tryb Nowy Generowania"
+$checkMe2.Text="Nowy Tryb £adowania"
 $checkMe2.TabIndex=1
 $checkMe2.Checked=$true
 $checkMe2.Font = $MyFont
@@ -368,10 +443,35 @@ $textBox3.Text=$do_t
 $textBox3.Font = $MyFont
 $form.Controls.Add($textBox3)
 
+#TEXTBOX 4
+$textBox4 = New-Object System.Windows.Forms.TextBox
+$textBox4.Location = New-Object System.Drawing.Point(($Right_Row_Button+5),255)
+$textBox4.Size = New-Object System.Drawing.Size(260,30)
+$textBox4.Text=$myRegxFile
+$textBox4.Font = $MyFont
+#$form.Controls.Add($textBox4)
+
 
 #IMAGES
 [System.Windows.Forms.Application]::EnableVisualStyles();
 
+
+#okno prosz¹ce o wpisanie wartoœci
+function GetStringFromUser()
+{
+    param(
+        [Parameter(Mandatory=$false, Position=0)]
+        [string]$Title,
+		[Parameter(Mandatory=$false, Position=1)]
+		[string]$Msg,
+		[Parameter(Mandatory=$false, Position=2)]
+		[string]$Out
+    )
+	
+	[void][Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic')
+
+	return [Microsoft.VisualBasic.Interaction]::InputBox($Msg, $Title, $Out)
+}
 
 #zwraca iloœc modu³ów /del
 function Zliczaj1($co)
@@ -532,8 +632,14 @@ function GetList($sciezka1)
 			#wype³nienie $fileContent nazwami plików jako kluczy i zawartoœci jako value
 			# [Regex]::Escape - zmienia znaki ucieczki
 			# ConvertFrom-StringData - zamienia na s³ownik klucz=wartoœæ ("\n\t\r \\ \..." odczytuje jako znakami ucieczki)
-			$Dict[$year].$week | ForEach-Object {$fileContent.Add($_.Name, (GET-CONTENT $_.FULLNAME -Head 10 | ForEach-Object{([Regex]::Escape($_) | Select-String -Pattern $filePatternRegxKeyValue) } | ConvertFrom-StringData))}
+			#$myRegxFile, "_0.txt"
+			
+			#$Dict[$year].$week | ForEach-Object {$fileContent.Add($_.Name, (GET-CONTENT $_.FULLNAME -Head 10 | ForEach-Object{([Regex]::Escape($_) | Select-String -Pattern $filePatternRegxKeyValue) } | ConvertFrom-StringData))}
+			
+			$Dict[$year].$week | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object {$fileContent.Add($_.Name, (GET-CONTENT $_.FULLNAME -Head $ile_lini_czytac | ForEach-Object{([Regex]::Escape($_) | Select-String -Pattern $filePatternRegxKeyValue) } | ConvertFrom-StringData))}
 
+			if($checkMe1.Checked){write-host "-- N:",($Dict[$year].$week.Name | Out-String)}
+			
 			#$lista_first=@(
 			#write-host "--count ", $fileContent.COUNT, $fileContent.GetType() #System.Collections.Hashtable
 			#write-host $fileContent.keys
@@ -628,21 +734,21 @@ function GetList($sciezka1)
 			#write-host "rok:$year tydzien:$week PY:", $lista.Length, "/", $Dict[$year].$week.Length
 
 			#FP
-			$lista_first_pass=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT=PASS"} | WHERE-OBJECT { $_.Name -MATCH "_0.txt" } )
+			$lista_first_pass=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head $ile_lini_czytac; $A -MATCH "RESULT=PASS"} | WHERE-OBJECT { $_.Name -MATCH "_0.txt" } )
 
 			#FTT
-			$lista_first=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT="} | WHERE-OBJECT { $_.Name -MATCH "_0.txt" } )
+			$lista_first=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head $ile_lini_czytac; $A -MATCH "RESULT="} | WHERE-OBJECT { $_.Name -MATCH "_0.txt" } )
 			
 			#PY
 			#sprawdzenie czy dany log zawiera ci¹g znaków w pierwszych 10 liniach, jesli tak to test zaliczany jako pass
 			#dodaæ sprawdzanie czy plik zawieraj¹ obie linie !
-			$lista_pass=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT=PASS" } )
-			$lista_fail=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT=FAIL" } )
+			$lista_pass=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head $ile_lini_czytac; $A -MATCH "RESULT=PASS" } )
+			$lista_fail=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head $ile_lini_czytac; $A -MATCH "RESULT=FAIL" } )
 			
 			#ile modu³ów zosta³o przetestowanych
 			$lista_last_test=(Zliczaj2 $Dict[$year][$week])
 			#write-host $lista_last_test
-			$lista_last_pass=@($lista_last_test | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT=PASS" } )
+			$lista_last_pass=@($lista_last_test | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head $ile_lini_czytac; $A -MATCH "RESULT=PASS" } )
 			#write-host "lista_last_pass",$lista_last_pass.Length
 			}
 			
@@ -652,26 +758,27 @@ function GetList($sciezka1)
 
 			
 			#wykrycie b³êdu w obliczeniach
-			if(($lista_pass.Length + $lista_fail.Length) -ne $Dict[$year].$week.Length)
-			{
-				write-host "Uwaga!!! Wykryto plik ktory nie jest logiem z testow! tydzien:$week PASS + FAIL =", $lista_pass.Length, "+", $lista_fail.Length,"=",$Dict[$year].$week.Length
-				write-host ""
-				
-			}
+			#if(($lista_pass.Length + $lista_fail.Length) -ne $Dict[$year].$week.Length)
+			#{
+			#	write-host "Uwaga!!! Wykryto plik ktory nie jest logiem z testow! tydzien:$week PASS + FAIL =", $lista_pass.Length, "+", $lista_fail.Length,"=",$Dict[$year].$week.Length
+			#	write-host ""
+			#}
 			
 			if($Result[$year].Length -eq 0)
 			{
 				$Result[$year] = @{}
 			}
 
-			if($Result[$year][$week].Length -eq 0)
+			if(($Result[$year][$week].Length -eq 0) -and ($znalezione_testy -gt 0))
 			{
-				$Result[$year][$week] = @{"FPY"=$lista_first_pass.Length; "PY"=$lista_last_pass.Length ;"sum_pass"= $lista_pass.Length; "sum_test"= $znalezione_testy; "sum_moduly"= $lista_last_test.COUNT; "pliki_pass"= $lista_pass | Select-Object -Property Name; "pliki_fail"= $lista_fail | Select-Object -Property Name; "pliki_first_pass"=$lista_first_pass | Select-Object -Property Name; "pliki_last_pass"= $lista_last_pass | Select-Object -Property Name; "FTT"= $lista_first.Length; "pliki"=$fileContent}
+				$Result[$year][$week] = @{"FPY"=$lista_first_pass.Length; "PY"=$lista_last_pass.Length ;"sum_pass"= $lista_pass.Length; "sum_test"= $znalezione_testy; "sum_moduly"= $lista_last_test.COUNT; "FTT"= $lista_first.Length; "pliki"=$fileContent}
 				#write-host $Result[$year][$week]["tydzien"]
 			}
 			else
 			{
-				write-host "Uwaga!!! Wykryto b³¹d spójnoœci testów"
+				#write-host "Uwaga!!! Wykryto b³¹d spójnoœci testów. znalezione_testy: ",$znalezione_testy
+				write-host "Uwaga!!! Wykryto nie wyœwietlane testy"
+				if($checkMe1.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
 			}
 			
 		}
@@ -691,8 +798,10 @@ function GetList($sciezka1)
 function Get-FromJson
 {
     param(
-        [Parameter(Mandatory=$true, Position=1)]
-        [string]$Path
+        [Parameter(Mandatory=$false, Position=0)]
+        [string]$Path,
+		[Parameter(Mandatory=$false, Position=1)]
+		[string]$String
     )
 
     function Get-Value {
@@ -726,7 +835,7 @@ function Get-FromJson
     }
 
 
-    if (Test-Path $Path)
+    if ($Path -and (Test-Path $Path))
     {
         $json = Get-Content $Path -Raw
     }
@@ -734,36 +843,138 @@ function Get-FromJson
     {
         $json = '{}'
     }
-
+	
+	if($String)
+	{
+		$json = $String
+	}
+    else
+    {
+        $json = '{}'
+    }
+	
     $hashtable = Get-Value -value (ConvertFrom-Json $json)
 
     return $hashtable
 }
 
+#https://gist.github.com/marcgeld/bfacfd8d70b34fdf1db0022508b02aca
+#https://powershell.org/forums/topic/compressing-data-to-gzip/
+function Get-CompressedByteArray {
+
+	[CmdletBinding()]
+    Param (
+	[Parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [byte[]] $byteArray = $(Throw("-byteArray is required"))
+    )
+	Process {
+        Write-Verbose "Get-CompressedByteArray"
+       	[System.IO.MemoryStream] $output = New-Object System.IO.MemoryStream
+        $gzipStream = New-Object System.IO.Compression.GzipStream $output, ([IO.Compression.CompressionMode]::Compress)
+      	$gzipStream.Write( $byteArray, 0, $byteArray.Length )
+        $gzipStream.Close()
+        $output.Close()
+        $tmp = $output.ToArray()
+        Write-Output $tmp
+    }
+}
+
+function Get-DecompressedByteArray {
+
+	[CmdletBinding()]
+    Param (
+		[Parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [byte[]] $byteArray = $(Throw("-byteArray is required"))
+    )
+	Process {
+	    Write-Verbose "Get-DecompressedByteArray"
+        $input = New-Object System.IO.MemoryStream( , $byteArray )
+	    $output = New-Object System.IO.MemoryStream
+        $gzipStream = New-Object System.IO.Compression.GzipStream $input, ([IO.Compression.CompressionMode]::Decompress)
+	    $gzipStream.CopyTo( $output )
+        $gzipStream.Close()
+		$input.Close()
+		[byte[]] $byteOutArray = $output.ToArray()
+        Write-Output $byteOutArray
+    }
+}
+
+#https://stackoverflow.com/questions/50654683/powershell-decompress-byte-array-takes-lot-of-time
+#https://www.codeproject.com/Questions/424881/encode-and-decode-error-invalid-character-in-a-bas
 #https://gallery.technet.microsoft.com/scriptcenter/GUI-popup-FileSaveDialog-813a4966
 function dojson()
 {
+    param(
+        [Parameter(Mandatory=$true, Position=1)]
+        [string]$Format
+    )
+	
     $openDiag=New-Object System.Windows.Forms.savefiledialog
 	$openDiag.initialDirectory = [System.IO.Directory]::GetCurrentDirectory()
-	$openDiag.filter = "Log Files|*.json|All Files|*.*" 
+	$openDiag.filter = "Log Files|*.$Format|All Files|*.*" 
     #otwieranie ostatnio wybrany folder
     $result=$openDiag.ShowDialog()
     if($result -eq "OK")
     {
 	    #[System.Windows.Forms.MessageBox]::Show("Ustawiono: "+$openDiag.filename,'plik')
 		#$Wynik | Select-Object -Property * | ConvertTo-JSON -Depth 4 | Set-Content -Path $openDiag.filename
-		$Wynik | ConvertTo-JSON -Depth 6 | Set-Content -Path $openDiag.filename
-		#$Wynik | ForEach-OBJECT{ [pscustomobject]$_} | Export-CSV -Path "dump.csv"
+		
+		if($Format -eq "json")
+		{
+			#dane surowe
+			$Wynik | ConvertTo-JSON -Depth 6 | Set-Content -Path $openDiag.filename
+		}
+		elseif($Format -eq "gz")
+		{
+			#dane skompresowane
+			
+			#tworzymy enkoder
+			[System.Text.Encoding] $enc = [System.Text.Encoding]::UTF8
+			#konwersja danych na json i ³¹cznie w jeden string
+			$text = -join ($Wynik | ConvertTo-JSON -Depth 6)
+			
+			[byte[]] $encText = $enc.GetBytes( $text )
+			
+			$compressedByteArray = Get-CompressedByteArray -byteArray $encText
+			#Write-Host "Encoded: " ( $enc.GetString( $compressedByteArray ) | Out-String )
+			
+			[Io.File]::WriteAllBytes($openDiag.filename, $compressedByteArray )
+			#$Wynik | ForEach-OBJECT{ [pscustomobject]$_} | Export-CSV -Path "dump.csv"
+		}
+		elseif($Format -eq "base64")
+		{
+			#BASE64
+			
+			#tworzymy enkoder
+			[System.Text.Encoding] $enc = [System.Text.Encoding]::UTF8
+			#konwersja danych na json i ³¹cznie w jeden string
+			$text = -join( $Wynik | ConvertTo-JSON -Depth 6 )
+			#konwersja z string na bytes
+			[byte[]] $toEncode2Bytes = $enc.GetBytes($text);
+			#konwersja na base64
+			$sReturnValue = [System.Convert]::ToBase64String($toEncode2Bytes);
+			#konwersja na bytes i zapis do pliku
+			[IO.File]::WriteAllBytes($openDiag.filename, $enc.GetBytes($sReturnValue))
+		}
+		else
+		{
+			write-host "Nie zanany format:",$format
+		}
     }
 }
 
 #https://community.idera.com/database-tools/powershell/powertips/b/tips/posts/using-open-file-dialogs
 function zjson()
 {
+    param(
+        [Parameter(Mandatory=$true, Position=1)]
+        [string]$Format
+    )
+	
     $openDiag=New-Object System.Windows.Forms.OpenFileDialog
 	$openDiag.Multiselect = $false
 	$openDiag.initialDirectory = [System.IO.Directory]::GetCurrentDirectory()
-	$openDiag.filter = "Log Files|*.json|All Files|*.*" 
+	$openDiag.filter = "Log Files|*.$Format|All Files|*.*"
     #otwieranie ostatnio wybrany folder
     $result=$openDiag.ShowDialog()
     if($result -eq "OK")
@@ -772,8 +983,48 @@ function zjson()
 		#$script:Wynik = (Get-Content -Raw -Path $openDiag.filename | ConvertFrom-Json)
 		#write-host ($Wynik | ConvertTo-JSON -Depth 4)
 		
-		$script:Wynik = Get-FromJson $openDiag.filename
-		
+		if($Format -eq "json")
+		{
+			#dane surowe
+			#$script:Wynik = Get-FromJson -Path $openDiag.filename #nie bêdzie dzia³a³o bo usun¹³em -Path
+			$script:Wynik = Get-FromJson -String (Get-Content -Raw -Path $openDiag.filename)
+		}
+		elseif($Format -eq "gz")
+		{
+			#dane skompresowane
+			
+			#tworzymy enkoder
+			[System.Text.Encoding] $enc = [System.Text.Encoding]::UTF8
+			
+			$inBytes = [System.IO.File]::ReadAllBytes($openDiag.filename)
+
+			$bytes = Get-DecompressedByteArray -byteArray $inBytes
+			
+			$dataString = $enc.GetString( $bytes )		
+			
+			$script:Wynik = Get-FromJson -String $dataString
+			#Write-Host "Decoded: " ( $script:Wynik | Out-String )
+		}
+		elseif($Format -eq "base64")
+		{
+			#BASE64
+
+			#tworzymy enkoder
+			[System.Text.Encoding] $enc = [System.Text.Encoding]::UTF8
+			#odczyt danych i zmiana z bytes na string
+			$eValue = $enc.GetString( [System.IO.File]::ReadAllBytes($openDiag.filename) )
+			#konwersja z base64
+			[byte[]] $encodedDataBytes = [System.Convert]::FromBase64String($eValue);
+			#zmiana z bytes na string
+			$sReturnValue = [System.Text.Encoding]::UTF8.GetString($encodedDataBytes);
+			#odczytanie w³aœciwych informacji
+			$script:Wynik = Get-FromJson -String $sReturnValue
+		}
+		else
+		{
+			write-host "Nie zanany format:",$format
+		}
+			
 		Odswiez
 	}
 }
@@ -829,6 +1080,7 @@ function zapis_konfiguracji()
 	New-ItemProperty -Path $regPath -Name $regPastWeek -Value $od_t -Force | Out-Null
 	New-ItemProperty -Path $regPath -Name $regToWeek -Value $do_t -Force | Out-Null
 	New-ItemProperty -Path $regPath -Name $name -Value $sciezka -Force | Out-Null
+	New-ItemProperty -Path $regPath -Name $regMyRegxFile -Value $myRegxFile -Force | Out-Null
 }
 
 function Odswiez()
@@ -846,14 +1098,14 @@ function Odswiez()
 	$label6.Text="£¹cznie folderów: " + ($Wynik.keys).COUNT
 	$label6.Refresh()
 
-	foreach($modul in ($Wynik.keys))
+	foreach($modul in $Wynik.keys )
 	{
 		if($checkMe1.Checked){write-host "modul", $modul}
 		
 		foreach($year in ($Wynik[$modul].keys | Sort-Object {[double]$_}))
 		{
 			if($checkMe1.Checked){write-host "key{$modul : {$year : ... }} count value:", $Wynik[$modul][$year].Length}
-
+			
 			foreach($week in ($Wynik[$modul][$year].keys | Sort-Object {[double]$_}))
 			{
 				if($checkMe1.Checked){write-host "key{$modul : {$year : {$week : ... }}} count value:", $Wynik[$modul][$year].$week.Length, $Wynik.$modul.$year.$week["FPY"],$Wynik.$modul.$year.$week["PY"],$Wynik.$modul.$year.$week["sum"]}
@@ -885,7 +1137,8 @@ function Odswiez()
 				#wype³nanie tabeli
 				$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($modul, $week, $year, $Wynik.$modul.$year.$week["FPY"], $Wynik.$modul.$year.$week["FTT"], $Wynik.$modul.$year.$week["PY"], $Wynik.$modul.$year.$week["sum_moduly"], $Wynik.$modul.$year.$week["sum_pass"], $Wynik.$modul.$year.$week["sum_test"])), -1)
 				#$ListViewItem.StateImageIndex = 0
-				$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))	
+				$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))
+				#$listView.Refresh()
 			}
 		}
 		
