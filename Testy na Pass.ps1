@@ -23,6 +23,8 @@ $wysokosc_okna = 500
 # 2019.10.24 - 2h
 # 2019.10.28 - 1,5h - dodanie sortowanie po kolumnach
 # 2019.11.07 - 4h - FTT, export i import
+# 2019.11.08 - 4h
+# 2019.11.09 - 1h
 
 $title = "Testy na Pass GUI wersja. 7E"
 
@@ -85,7 +87,8 @@ $UserGMenu2.Text = "&Akcja"
 $UserGMenu1.Font = $MyFont
 $UserGMenu2.Font = $MyFont
 
-$DropDownGUsers1Dict=@{'Exportuj do JSON'={dojson}; 'Importuj z JSON'={zjson}}
+$DropDownGUsers1Dict=@{'1. Exportuj do JSON'={dojson}; '2. Importuj z JSON'={zjson}; "3. Zamknij"={$form.Close();}}
+
 ForEach ($GroupUserKey in ($DropDownGUsers1Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers1Dict[$GroupUserKey]
 	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -97,7 +100,7 @@ ForEach ($GroupUserKey in ($DropDownGUsers1Dict.keys | Sort-Object)) {
 	$GroupValue.Add_Click( $DropDownGUsers1Dict[$GroupUserKey] )
 }
 
-$DropDownGUsers2Dict=@{'Odœwie¿'={Odswiez}; 'Generuj'={Dzialaj}; 'Zmieñ Folder'={ChangeFolder} }
+$DropDownGUsers2Dict=@{'1. Odœwie¿'={Odswiez}; '2. Generuj'={Dzialaj}; '3. Zmieñ Folder'={ChangeFolder} }
 
 ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers2Dict[$GroupUserKey]
@@ -153,7 +156,7 @@ $form.Controls.Add($label2)
 
 #6 linia
 $label6=New-Object System.Windows.Forms.label
-$label6.Text="£¹cznie wyników: 0"
+$label6.Text="£¹cznie folderów: 0"
 $label6.AutoSize=$True
 $label6.Top="205"
 $label6.Left=$Right_Row_Button
@@ -170,18 +173,6 @@ $label7.Left=$Right_Row_Button
 $label7.Anchor="Left,Top"
 $label7.Font = $MyFont
 $form.Controls.Add($label7)
-
-
-#OKNO 1
-$listBox=New-Object System.Windows.Forms.Listbox
-$listBox.Location = New-Object System.Drawing.Size(10,55)
-$listBox.Size= New-Object System.Drawing.Size(($Right_Row_Button - 20),100)
-$listbox.HorizontalScrollbar = $true;
-$listBox.Font = $MyFont
-#$form.Controls.Add($listBox)
-
-
-
 
 #OKNO Z KOLUMNAMI
 $listView = New-Object System.Windows.Forms.ListView
@@ -281,7 +272,7 @@ $LVcol3.Text = "Rok"
 
 $LVcol4 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol4.TextAlign = $MyTextAlign
-$LVcol4.Text = "FPY - first pass yield"
+$LVcol4.Text = "FP - first pass"
 
 $LVcol5 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol5.TextAlign = $MyTextAlign
@@ -343,13 +334,13 @@ $form.Controls.Add($checkMe1)
 
 #CHECKBOX 2
 $checkMe2=New-Object System.Windows.Forms.CheckBox
-$checkMe2.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),425)
-$checkMe2.Size=New-Object System.Drawing.Size(100,30)
-$checkMe2.Text="Dopisuj wyniki"
+$checkMe2.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),325)
+$checkMe2.Size=New-Object System.Drawing.Size(150,30)
+$checkMe2.Text="Tryb Nowy Generowania"
 $checkMe2.TabIndex=1
-$checkMe2.Checked=$false
+$checkMe2.Checked=$true
 $checkMe2.Font = $MyFont
-#$form.Controls.Add($checkMe2)
+$form.Controls.Add($checkMe2)
 
 $textBoxPadingRight = 110
 
@@ -530,6 +521,105 @@ function GetList($sciezka1)
 		
 		foreach($week in ($Dict[$year].keys)) # | Sort-Object {[double]$_}))
 		{
+			if($checkMe2.Checked)
+			{
+			#otwarcie pliku i odczyt danych
+			$fileContent = @{}
+			
+			#https://stackoverflow.com/questions/52709332/powershell-read-filenames-under-folder-and-read-each-file-content-to-create-menu
+			#worzec wyszukiwania klucz=wartoœæ/ pomijanie lini bez takiej wartoœci np. "------"
+			$filePatternRegxKeyValue = '.*=.*'
+			#wype³nienie $fileContent nazwami plików jako kluczy i zawartoœci jako value
+			# [Regex]::Escape - zmienia znaki ucieczki
+			# ConvertFrom-StringData - zamienia na s³ownik klucz=wartoœæ ("\n\t\r \\ \..." odczytuje jako znakami ucieczki)
+			$Dict[$year].$week | ForEach-Object {$fileContent.Add($_.Name, (GET-CONTENT $_.FULLNAME -Head 10 | ForEach-Object{([Regex]::Escape($_) | Select-String -Pattern $filePatternRegxKeyValue) } | ConvertFrom-StringData))}
+
+			#$lista_first=@(
+			#write-host "--count ", $fileContent.COUNT, $fileContent.GetType() #System.Collections.Hashtable
+			#write-host $fileContent.keys
+			#write-host $fileContent.values  #System.Collections.Hashtable
+			#write-host $fileContent[$fileContent.keys[0]].GetType() #System.Object[]
+			#write-host ($fileContent[$fileContent.keys[0]].keys | Out-String) #System.Object[]
+			#nazwa3_serial3_1.txt           {System.Collections.Hashtable, System.Collections.Hashtable,..
+			#write-host ($fileContent[$fileContent.keys[0]][0] | Out-String) #.GetType() #System.Object[]
+			#write-host $fileContent[$fileContent.keys[0]][0].GetType() #System.Object[]
+			#write-host $fileContent[$fileContent.keys[0]][0][0].GetType() #System.Collections.Hashtable
+			#write-host ($fileContent[$fileContent.keys[0]][0][0].keys | Out-String) #System.Collections.Hashtable
+			
+			
+			#$tmp = @($fileContent.GetEnumerator() | WHERE-OBJECT { $_.Value } | WHERE-OBJECT{ 'result' -in $_.keys})
+			#write-host ($tmp | Out-String)
+			
+			#PY
+			$lista_pass = @()
+			$lista_fail = @()
+
+			#ile modu³ów zosta³o przetestowanych
+			$lista_last_test = Zliczaj2($fileContent.GetEnumerator())
+			if($checkMe1.Checked){write-host "last test:",($lista_last_test.Name | Out-String)}
+			
+			#Wow dzia³a
+			FOREACH ($fc in $fileContent.GetEnumerator())
+			{
+				#write-host ($fc.Value | Out-String) 
+				foreach($ff in $fc.Value)
+				{
+					#write-host ($ff.keys )
+					if('result' -in $ff.keys)
+					{
+						#$List_Of_Commands.Add($Array_Object) | Out-Null
+						#plik posiada log
+						#write-host "+",$ff.keys, $fc.Name
+						foreach($cf in $ff.keys)
+						{
+							#test na pass lub fail
+							#write-host $cf,"=",$ff[$cf]
+							
+							#na pass
+							if($ff[$cf] -match "pass")
+							{
+								#$lista_pass += $fc.Name #nazwa pliku
+								$lista_pass += $fc
+							}
+							elseif($ff[$cf] -match "fail")
+							{
+								$lista_fail += $fc
+							}
+							else
+							{
+								write-host "error result",$fc.Name
+							}
+						}
+					}
+				}
+			}
+			
+			$lista_last_pass = @($lista_last_test | WHERE-OBJECT {$lista_pass.Contains($_)} )
+			if($checkMe1.Checked){write-host "Last Pass:",($lista_last_pass.Name | Out-String)}
+
+			if($checkMe1.Checked){write-host "Pass:",($lista_pass.Name | Out-String)}
+			if($checkMe1.Checked){write-host "Fail:",($lista_fail.Name | Out-String)}
+
+			#FP
+			$lista_first_pass = @($lista_pass.Name | WHERE-OBJECT { $_ -MATCH "_0.txt" })
+			if($checkMe1.Checked){write-host "FP:",(($lista_pass.Name | WHERE-OBJECT { $_ -MATCH "_0.txt" }) | Out-String)}
+
+			#FTT
+			$lista_first=@(($lista_pass.Name + $lista_fail.Name) | WHERE-OBJECT { $_ -MATCH "_0.txt" })
+			if($checkMe1.Checked){write-host "FTT:",((($lista_pass.Name + $lista_fail.Name) | WHERE-OBJECT { $_ -MATCH "_0.txt" }) | Out-String)}
+
+			
+			
+			
+			
+			
+			}
+			else
+			{
+			
+			
+			#$Dict[$year].$week | ForEach-Object {$fileContent.Add($_.Name, (GET-CONTENT $_.FULLNAME -Head 10 | ConvertFrom-StringData))}
+			
 			#write-host "key{$year : {$week : ... }} count value:", $Dict[$year].$week.Length
 			#write-host $Dict[$year].$week
 
@@ -537,28 +627,29 @@ function GetList($sciezka1)
 			#$lista=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME; $A -MATCH "FAILS=0" }  | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME; $A -MATCH "ERRORS=0" } )
 			#write-host "rok:$year tydzien:$week PY:", $lista.Length, "/", $Dict[$year].$week.Length
 
+			#FP
+			$lista_first_pass=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT=PASS"} | WHERE-OBJECT { $_.Name -MATCH "_0.txt" } )
+
 			#FTT
 			$lista_first=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT="} | WHERE-OBJECT { $_.Name -MATCH "_0.txt" } )
-
-			#FPY
-			$lista_first_pass=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT=PASS"} | WHERE-OBJECT { $_.Name -MATCH "_0.txt" } )
 			
 			#PY
 			#sprawdzenie czy dany log zawiera ci¹g znaków w pierwszych 10 liniach, jesli tak to test zaliczany jako pass
 			#dodaæ sprawdzanie czy plik zawieraj¹ obie linie !
 			$lista_pass=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT=PASS" } )
 			$lista_fail=@($Dict[$year].$week | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT=FAIL" } )
-			$znalezione_testy = $lista_pass.Length + $lista_fail.Length
-			if($checkMe1.Checked){write-host "rok:$year tydzien:$week FPY:", $lista_first_pass.Length, "/", $znalezione_testy, "PY:", $lista_pass.Length, "/", $znalezione_testy}
 			
-			
+			#ile modu³ów zosta³o przetestowanych
 			$lista_last_test=(Zliczaj2 $Dict[$year][$week])
 			#write-host $lista_last_test
 			$lista_last_pass=@($lista_last_test | WHERE-OBJECT { $A=GET-CONTENT $_.FULLNAME -Head 10; $A -MATCH "RESULT=PASS" } )
 			#write-host "lista_last_pass",$lista_last_pass.Length
+			}
 			
-			#ile modu³ów zosta³o przetestowanych
-			$ile_mod=$lista_last_test.COUNT;
+			
+			$znalezione_testy = $lista_pass.Length + $lista_fail.Length
+			if($checkMe1.Checked){write-host "rok:$year tydzien:$week FPY:", $lista_first_pass.Length, "/", $znalezione_testy, "PY:", $lista_pass.Length, "/", $znalezione_testy}
+
 			
 			#wykrycie b³êdu w obliczeniach
 			if(($lista_pass.Length + $lista_fail.Length) -ne $Dict[$year].$week.Length)
@@ -575,7 +666,7 @@ function GetList($sciezka1)
 
 			if($Result[$year][$week].Length -eq 0)
 			{
-				$Result[$year][$week] = @{"FPY"=$lista_first_pass.Length; "PY"=$lista_last_pass.Length ;"sum_pass"= $lista_pass.Length; "sum_test"= $znalezione_testy; "sum_moduly"= $ile_mod; "pliki_pass"= $lista_pass | Select-Object -Property Name; "pliki_fail"= $lista_fail | Select-Object -Property Name; "pliki_first_pass"=$lista_first_pass | Select-Object -Property Name; "pliki_last_pass"= $lista_last_pass | Select-Object -Property Name; "FTT"= $lista_first.Length}
+				$Result[$year][$week] = @{"FPY"=$lista_first_pass.Length; "PY"=$lista_last_pass.Length ;"sum_pass"= $lista_pass.Length; "sum_test"= $znalezione_testy; "sum_moduly"= $lista_last_test.COUNT; "pliki_pass"= $lista_pass | Select-Object -Property Name; "pliki_fail"= $lista_fail | Select-Object -Property Name; "pliki_first_pass"=$lista_first_pass | Select-Object -Property Name; "pliki_last_pass"= $lista_last_pass | Select-Object -Property Name; "FTT"= $lista_first.Length; "pliki"=$fileContent}
 				#write-host $Result[$year][$week]["tydzien"]
 			}
 			else
@@ -661,7 +752,7 @@ function dojson()
     {
 	    #[System.Windows.Forms.MessageBox]::Show("Ustawiono: "+$openDiag.filename,'plik')
 		#$Wynik | Select-Object -Property * | ConvertTo-JSON -Depth 4 | Set-Content -Path $openDiag.filename
-		$Wynik | ConvertTo-JSON -Depth 4 | Set-Content -Path $openDiag.filename
+		$Wynik | ConvertTo-JSON -Depth 6 | Set-Content -Path $openDiag.filename
 		#$Wynik | ForEach-OBJECT{ [pscustomobject]$_} | Export-CSV -Path "dump.csv"
     }
 }
@@ -696,12 +787,20 @@ function Dzialaj()
 	
 	#zerowanie zmiennej
 	$script:Wynik = [ordered]@{}
+	$listView.Items.Clear()
 	
 	foreach($path in (Get-ChildItem $sciezka))
 	{
-		write-host $path,$path.Name
+		write-host $path,$path.LastWriteTime
 		if((Get-Item $path.FULLNAME) -is [System.IO.DirectoryInfo])
 		{
+			#wype³nanie tabeli aktualnym statusem pracy
+			$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($path.Name, "...", "...", "...", "...", "...", "...", "...", "...")), -1)
+			#$ListViewItem.StateImageIndex = 0
+			$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))
+			$ListView.Refresh()
+			
+			#w³aœciwe generowanie wyników
 			if($checkMe1.Checked){write-host $path.FULLNAME}
 			$Wynik[$path.Name] = GetList($path.FULLNAME)
 		}
@@ -742,10 +841,9 @@ function Odswiez()
 	$do_t=$textBox3.Text
 
 	#odœwierzenie listy
-	$listBox.Items.Clear()
 	$listView.Items.Clear()
 	
-	$label6.Text="£¹cznie wyników: " + ($Wynik.keys).COUNT
+	$label6.Text="£¹cznie folderów: " + ($Wynik.keys).COUNT
 	$label6.Refresh()
 
 	foreach($modul in ($Wynik.keys))
@@ -759,6 +857,8 @@ function Odswiez()
 			foreach($week in ($Wynik[$modul][$year].keys | Sort-Object {[double]$_}))
 			{
 				if($checkMe1.Checked){write-host "key{$modul : {$year : {$week : ... }}} count value:", $Wynik[$modul][$year].$week.Length, $Wynik.$modul.$year.$week["FPY"],$Wynik.$modul.$year.$week["PY"],$Wynik.$modul.$year.$week["sum"]}
+				
+				if($checkMe1.Checked){write-host ($Wynik.$modul.$year.$week["pliki"] | ConvertTo-JSON -Depth 2)}
 				
 				#jeœli rok = 0 to pomija wszelkie restrykcjie czasowe
 				if($testRok -ne "0")
@@ -781,14 +881,6 @@ function Odswiez()
 						continue
 					}
 				}
-				
-				#latwe do odczytania w kodzie
-				#$listBox.Items.Add("$week/$year  $modul   FPY: "+ $Wynik.$modul.$year.$week["FPY"] + "   PY: "+ $Wynik.$modul.$year.$week["PY"] + " Suma pass: " + $Wynik.$modul.$year.$week["sum_pass"] + " Suma mod: " + $Wynik.$modul.$year.$week["sum_moduly"] + " Suma_testow: " + $Wynik.$modul.$year.$week["sum_test"] )
-				
-				#latwe do odczytania w oknie
-				#$pad = 3
-				#$week_f = ([convert]::ToInt32($week,10).ToString("#00")).PadLeft(3)
-				#$listBox.Items.Add("$modul $week_f/$year FPY: "+ ($Wynik.$modul.$year.$week["FPY"].ToString("#0")).PadLeft($pad) + "   PY: "+ ($Wynik.$modul.$year.$week["PY"].ToString("#0")).PadLeft($pad) + " Suma mod: " + ($Wynik.$modul.$year.$week["sum_moduly"].ToString("#0")).PadLeft($pad) + " Suma pass: " + ($Wynik.$modul.$year.$week["sum_pass"].ToString("#0")).PadLeft($pad) + " Suma_testow: " + ($Wynik.$modul.$year.$week["sum_test"].ToString("#0")).PadLeft($pad) )
 
 				#wype³nanie tabeli
 				$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($modul, $week, $year, $Wynik.$modul.$year.$week["FPY"], $Wynik.$modul.$year.$week["FTT"], $Wynik.$modul.$year.$week["PY"], $Wynik.$modul.$year.$week["sum_moduly"], $Wynik.$modul.$year.$week["sum_pass"], $Wynik.$modul.$year.$week["sum_test"])), -1)
@@ -801,30 +893,9 @@ function Odswiez()
 	
 	#$label6.Text="Wyników: " + ($ListView.Items).COUNT
 	#$label6.Refresh()
-	
-	if(($Wynik.keys).COUNT -eq 0)
-	{
-		UpdateList
-		
-	}
+
 }
 
-function UpdateList()
-{
-    #okno
-    $listBox.Items.Clear()
-	$listView.Items.Clear()
-	$label1.Text=$sciezka
-	$label1.Refresh()
-	
-	foreach($path in (Get-ChildItem $sciezka))
-	{
-		if((Get-Item $path.FULLNAME) -is [System.IO.DirectoryInfo])
-		{
-			$listBox.Items.Add($path.NAME) 
-		}
-	}
-}
 
 function ChangeFolder()
 {
@@ -841,13 +912,14 @@ function ChangeFolder()
 	    #[System.Windows.Forms.MessageBox]::Show("Ustawiono: "+$sciezka,'folder')
         $label1.Text=$sciezka
 
-        #UpdateList
 		$label1.Text=$sciezka
 		$label1.Refresh()
     }
 }
 
-UpdateList
+$label1.Text=$sciezka
+$label1.Refresh()
+
 
 #pokazanie okna
 $form.ShowDialog()
