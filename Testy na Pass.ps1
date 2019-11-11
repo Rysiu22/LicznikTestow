@@ -33,7 +33,8 @@ $ile_lini_czytac = 10
 # 2019.10.28 - 1,5h - dodanie sortowanie po kolumnach
 # 2019.11.07 - 4h - FTT, export i import
 # 2019.11.08 - 4h
-# 2019.11.09 - 9,5h - wczytanie kompletnych danych z nag³óka i generowanie z nich danych, filtrowanie nazw tylko przy generowaniu, od 13:00 do 22:30
+# 2019.11.09 - 9,5h - wczytanie kompletnych danych z nag³óka i generowanie z nich danych, filtrowanie nazw tylko przy generowaniu
+# 2019.11.11 - 6h
 
 $title = "Testy na Pass GUI wersja. 7F"
 
@@ -139,6 +140,8 @@ $DropDownGUsers2Dict=@{
 	'1 Odœwie¿'={Odswiez}; 
 	'2 £aduj'={Dzialaj}; 
 	'3 Zmieñ Folder'={ChangeFolder}
+	'4 Przelicz ponownie'={$Wynik = ObliczPonownie $Wynik; Odswiez};
+	'5 Czyœæ Tabele'={$script:Wynik=@{}; Odswiez}
 }
 
 ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
@@ -576,13 +579,151 @@ function Zliczaj2($co)
 	return $C
 }
 
+#Oblicz na nowo
+function ObliczPonownie
+{
+    param(
+        [Parameter(Mandatory=$true, Position=1)]
+        [hashtable]$Dict
+    )
+	
+	$tmp = @{}
+	foreach($path in $Dict.keys)
+	{
+		$tmp[$path] = LoadData -Dict $Dict[$path]
+	}
+	$tmp
+}
 
+#ponowne przeliczenie wyników z wczytanych danych
+function LoadData()
+{
+    param(
+        [Parameter(Mandatory=$true, Position=1)]
+        [hashtable]$Dict
+    )
+	#zmienna z danymi
+	$Result = @{}
+
+	#Przetworzenie zebranych danych
+	foreach($year in ($Dict.keys)) # | Sort-Object {[double]$_}))
+	{	
+		if($checkMe1.Checked){write-host "key{$year : ... } count value:", $Dict[$year].Length}
+		
+		foreach($week in ($Dict[$year].keys)) # | Sort-Object {[double]$_}))
+		{
+			if(-not $Dict[$year][$week]["pliki"])
+			{
+				continue
+			}
+			$fileContent = @{}
+			
+			$filePatternRegxKeyValue = '.*=.*'
+			
+			#$fileContent = $Dict[$year][$week]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile }
+			$Dict[$year][$week]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
+
+			if($checkMe1.Checked){write-host "-- N:",($Dict[$year].$week.Name | Out-String)}
+			
+			#PY
+			$lista_pass = @()
+			$lista_fail = @()
+
+			#ile modu³ów zosta³o przetestowanych
+			$lista_last_test = Zliczaj2($fileContent.GetEnumerator())
+			if($checkMe1.Checked){write-host "last test:",($lista_last_test.Name | Out-String)}
+			
+			#Wow dzia³a
+			FOREACH ($fc in $fileContent.GetEnumerator())
+			{
+				#write-host ($fc.Value | Out-String) 
+				foreach($ff in $fc.Value)
+				{
+					#write-host ($ff.keys )
+					if('result' -in $ff.keys)
+					{
+						#$List_Of_Commands.Add($Array_Object) | Out-Null
+						#plik posiada log
+						#write-host "+",$ff.keys, $fc.Name
+						foreach($cf in $ff.keys)
+						{
+							#test na pass lub fail
+							#write-host $cf,"=",$ff[$cf]
+							
+							#na pass
+							if($ff[$cf] -match "pass")
+							{
+								#$lista_pass += $fc.Name #nazwa pliku
+								$lista_pass += $fc
+							}
+							elseif($ff[$cf] -match "fail")
+							{
+								$lista_fail += $fc
+							}
+							else
+							{
+								write-host "error result",$fc.Name
+							}
+						}
+					}
+				}
+			}
+			
+			$lista_last_pass = @($lista_last_test | WHERE-OBJECT {$lista_pass.Contains($_)} )
+			if($checkMe1.Checked){write-host "Last Pass:",($lista_last_pass.Name | Out-String)}
+
+			if($checkMe1.Checked){write-host "Pass:",($lista_pass.Name | Out-String)}
+			if($checkMe1.Checked){write-host "Fail:",($lista_fail.Name | Out-String)}
+
+			#FP
+			$lista_first_pass = @($lista_pass.Name | WHERE-OBJECT { $_ -MATCH "_0.txt" })
+			if($checkMe1.Checked){write-host "FP:",(($lista_pass.Name | WHERE-OBJECT { $_ -MATCH "_0.txt" }) | Out-String)}
+
+			#FTT
+			$lista_first=@(($lista_pass.Name + $lista_fail.Name) | WHERE-OBJECT { $_ -MATCH "_0.txt" })
+			if($checkMe1.Checked){write-host "FTT:",((($lista_pass.Name + $lista_fail.Name) | WHERE-OBJECT { $_ -MATCH "_0.txt" }) | Out-String)}
+			
+			$znalezione_testy = $lista_pass.Length + $lista_fail.Length
+			if($checkMe1.Checked){write-host "rok:$year tydzien:$week FPY:", $lista_first_pass.Length, "/", $znalezione_testy, "PY:", $lista_pass.Length, "/", $znalezione_testy}
+			
+			if($Result[$year].Length -eq 0)
+			{
+				$Result[$year] = @{}
+			}
+
+			if(($Result[$year][$week].Length -eq 0) -and ($znalezione_testy -gt 0))
+			{
+				$Result[$year][$week] = @{"FPY"=$lista_first_pass.Length; "PY"=$lista_last_pass.Length ;"sum_pass"= $lista_pass.Length; "sum_test"= $znalezione_testy; "sum_moduly"= $lista_last_test.COUNT; "FTT"= $lista_first.Length; "pliki"=$fileContent}
+				#write-host $Result[$year][$week]["tydzien"]
+			}
+			else
+			{
+				#write-host "Uwaga!!! Wykryto b³¹d spójnoœci testów. znalezione_testy: ",$znalezione_testy
+				write-host "Uwaga!!! Wykryto nie wyœwietlane testy"
+				if($checkMe1.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
+			}
+			
+		}
+		if($checkMe1.Checked){write-host "koniec $year"}
+		#write-host "week",$Result[$year].keys
+	}
+	if($checkMe1.Checked){write-host "koniec $sciezka1"}
+	#write-host $Result.keys
+
+	return ,$Result
+
+
+}
 
 
 #wczytanie i tworzenie danych
-function GetList($sciezka1)
+function GetList()
 {
-
+    param(
+		[Parameter(Mandatory=$false, Position=1)]
+		[string]$Sciezka1
+    )
+	
 	$testRok=$textBox1.Text
 	$od_t=$textBox2.Text
 	$do_t=$textBox3.Text
@@ -658,6 +799,7 @@ function GetList($sciezka1)
 		write-host ""
 	}
 
+		
 	#Przetworzenie zebranych danych
 	foreach($year in ($Dict.keys)) # | Sort-Object {[double]$_}))
 	{	
@@ -1068,7 +1210,7 @@ function zjson()
 		{
 			write-host "Nie zanany format:",$format
 		}
-			
+
 		Odswiez
 	}
 }
@@ -1097,7 +1239,7 @@ function Dzialaj()
 			
 			#w³aœciwe generowanie wyników
 			if($checkMe1.Checked){write-host $path.FULLNAME}
-			$Wynik[$path.Name] = GetList($path.FULLNAME)
+			$Wynik[$path.Name] = GetList -Sciezka $path.FULLNAME
 		}
 	}
 	
@@ -1142,15 +1284,15 @@ function Odswiez()
 	$label6.Text="£¹cznie folderów: " + ($Wynik.keys).COUNT
 	$label6.Refresh()
 
-	foreach($modul in $Wynik.keys )
+	foreach($modul in ($Wynik.keys | Sort-Object ) )
 	{
 		if($checkMe1.Checked){write-host "modul", $modul}
 		
-		foreach($year in ($Wynik[$modul].keys | Sort-Object {[double]$_}))
+		foreach($year in ($Wynik[$modul].keys | Sort-Object {[int]$_}))
 		{
 			if($checkMe1.Checked){write-host "key{$modul : {$year : ... }} count value:", $Wynik[$modul][$year].Length}
 			
-			foreach($week in ($Wynik[$modul][$year].keys | Sort-Object {[double]$_}))
+			foreach($week in ($Wynik[$modul][$year].keys | Sort-Object {[int]$_}))
 			{
 				if($checkMe1.Checked){write-host "key{$modul : {$year : {$week : ... }}} count value:", $Wynik[$modul][$year].$week.Length, $Wynik.$modul.$year.$week["FPY"],$Wynik.$modul.$year.$week["PY"],$Wynik.$modul.$year.$week["sum"]}
 				
