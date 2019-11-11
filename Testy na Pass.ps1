@@ -20,7 +20,7 @@ $wysokosc_okna = 500
 $wzorzec_karty = "\w+\d+-\d+_B\d+W\d+S\d+_\d+\.txt"
 $wzorzec_wzmacniacza = "10P000ABT\d+_AMMAWZ\d{10}_\d+\.txt"
 
-$ile_lini_czytac = 10
+$ile_lini_czytac = 15
 
 
 #danych poni¿ej nie edytowaæ
@@ -34,7 +34,7 @@ $ile_lini_czytac = 10
 # 2019.11.07 - 4h - FTT, export i import
 # 2019.11.08 - 4h
 # 2019.11.09 - 9,5h - wczytanie kompletnych danych z nag³óka i generowanie z nich danych, filtrowanie nazw tylko przy generowaniu
-# 2019.11.11 - 6h
+# 2019.11.11 - 9h
 
 $title = "Testy na Pass GUI wersja. 7F"
 
@@ -159,23 +159,27 @@ $DropDownGUsers3Dict=@{
 	'1 Wszystko: .*' = {
 		$script:myRegxFile=".*"; 
 		$label8.Text="wzorzec: ",$myRegxFile; 
-		$label8.Refresh()
+		$label8.Refresh();
+		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
 	"2 Karta: $wzorzec_karty" = {
 		$script:myRegxFile=$wzorzec_karty; 
 		$label8.Text="wzorzec: ",$myRegxFile; 
-		$label8.Refresh()
+		$label8.Refresh();
+		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
 	"3 Wzmacniacz: $wzorzec_wzmacniacza" = {
 		$script:myRegxFile=$wzorzec_wzmacniacza; 
 		$label8.Text="wzorzec: ",$myRegxFile; 
-		$label8.Refresh()
+		$label8.Refresh();
+		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
 	'4 W³asny' = {
 		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxFile; 
 		if($tmp){$script:myRegxFile=$tmp}; 
 		$label8.Text="wzorzec: ",$myRegxFile; 
-		$label8.Refresh()
+		$label8.Refresh();
+		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
 }
 
@@ -371,6 +375,100 @@ Add-Type -TypeDefinition $comparerClassString -ReferencedAssemblies ('System.Win
 $ListView.add_ColumnClick({ $listView.ListViewItemSorter = New-Object ListViewItemComparer($_.Column)})
 
 
+#$ListView.Controls.Add($textBox1)
+
+function Logi($item)
+{
+	$fileContent = @{}
+
+	$Wynik[$item[0].Text][$item[2].Text][$item[1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
+
+	
+	#Tworzenie okna programu
+	Add-Type -AssemblyName System.Windows.Forms
+	$form = New-Object System.Windows.Forms.Form
+	$form.Text=$item[0].Text
+	$form.Size=New-Object System.Drawing.Size(($Right_Row_Button+300), ($wysokosc_okna+120))
+	$form.StartPosition='CenterScreen'
+
+	#OKNO Z KOLUMNAMI
+	$listView = New-Object System.Windows.Forms.ListView
+	$ListView.Location = New-Object System.Drawing.Point(10, 55)
+	$ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20),$wysokosc_okna)
+	$ListView.View = [System.Windows.Forms.View]::Details
+	$ListView.FullRowSelect = $true;
+	$ListView.Font = $MyFont
+	$form.Controls.Add($ListView)
+
+	$MyTextAlign = [System.Windows.Forms.HorizontalAlignment]::Left;
+
+	#Nazwy kolumn
+	$LVcol1 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol1.TextAlign = $MyTextAlign
+	$LVcol1.Text = "Nazwa"
+	$LVcol1.Width = $rozmiar_kolumn*3
+
+	$LVcol2 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol2.TextAlign = $MyTextAlign
+	$LVcol2.Text = "Result"
+
+	$LVcol3 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol3.TextAlign = $MyTextAlign
+	$LVcol3.Text = "SEQ_MD5"
+	$LVcol3.Width = $rozmiar_kolumn
+	
+	$LVcol4 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol4.TextAlign = $MyTextAlign
+	$LVcol4.Text = "START"
+	$LVcol4.Width = $rozmiar_kolumn*2
+	
+	$LVcol5 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol5.TextAlign = $MyTextAlign
+	$LVcol5.Text = "test"
+
+
+	$ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVcol2, $LVcol3, $LVcol4, $LVcol5 )))
+
+	
+	
+	#write-host "Files:",($Files.gettype() | Out-String)
+	#write-host "Items:",($Files | Out-String)
+	
+	function findMyColumn($str)
+	{
+		$out = ($fileContent[$nazwa] | WHERE-OBJECT { $str -in $_.keys })
+		if($out)
+		{
+			return $out[$str]
+		}
+		else
+		{
+			return "."
+		}
+	}
+	
+
+	foreach($nazwa in ($fileContent.keys | Sort-Object ) )
+	{
+		#write-host "Nazwa:",($Files[$nazwa].gettype() | Out-String)
+		#write-host "Items:",($Files[$nazwa] | WHERE-OBJECT { 'result' -in $_.keys } | Out-String)
+				
+		#write-host "Nazwa:",($Files[$nazwa].keys | Out-String)
+		#wype³nanie tabeli
+		$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($nazwa, (findMyColumn("result")), (findMyColumn("SEQ_MD5")),  (findMyColumn("START")),  (findMyColumn("test")) )), -1) #, , , , , , , 
+		#$ListViewItem.StateImageIndex = 0
+		$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))
+		#$listView.Refresh()
+	}
+
+	$form.ShowDialog()
+}
+
+#https://community.spiceworks.com/topic/1982317-catch-colum-value-fromchecked-items
+#$ListView.Add_MouseClick({[System.Windows.Forms.MessageBox]::Show($ListView.SelectedItems[0].Text,'Info')})
+$ListView.Add_MouseClick({Logi($ListView.SelectedItems.SubItems)})
+
+
 
 
 $ListView.Font = $MyFont
@@ -444,6 +542,16 @@ $ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVc
 #$form.Controls.Add($generate)
 
 
+#CHECKBOX 0
+$checkMe0=New-Object System.Windows.Forms.CheckBox
+$checkMe0.Location=New-Object System.Drawing.Size(($Right_Row_Button+210),55)
+$checkMe0.Size=New-Object System.Drawing.Size(100,30)
+$checkMe0.Text="Debug2"
+$checkMe0.TabIndex=1
+$checkMe0.Checked=$false
+$checkMe0.Font = $MyFont
+$form.Controls.Add($checkMe0)
+
 #CHECKBOX 1
 $checkMe1=New-Object System.Windows.Forms.CheckBox
 $checkMe1.Location=New-Object System.Drawing.Size(($Right_Row_Button+210),25)
@@ -456,13 +564,23 @@ $form.Controls.Add($checkMe1)
 
 #CHECKBOX 2
 $checkMe2=New-Object System.Windows.Forms.CheckBox
-$checkMe2.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),325)
+$checkMe2.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),305)
 $checkMe2.Size=New-Object System.Drawing.Size(150,30)
 $checkMe2.Text="Nowy Tryb £adowania"
 $checkMe2.TabIndex=1
 $checkMe2.Checked=$true
 $checkMe2.Font = $MyFont
 $form.Controls.Add($checkMe2)
+
+#CHECKBOX 3
+$checkMe3=New-Object System.Windows.Forms.CheckBox
+$checkMe3.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),355)
+$checkMe3.Size=New-Object System.Drawing.Size(150,30)
+$checkMe3.Text="Nie dziel na daty"
+$checkMe3.TabIndex=1
+$checkMe3.Checked=$true
+$checkMe3.Font = $MyFont
+#$form.Controls.Add($checkMe3)
 
 $textBoxPadingRight = 110
 
@@ -700,7 +818,7 @@ function LoadData()
 			{
 				#write-host "Uwaga!!! Wykryto b³¹d spójnoœci testów. znalezione_testy: ",$znalezione_testy
 				write-host "Uwaga!!! Wykryto nie wyœwietlane testy"
-				if($checkMe1.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
+				if($checkMe0.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
 			}
 			
 		}
@@ -964,7 +1082,7 @@ function GetList()
 			{
 				#write-host "Uwaga!!! Wykryto b³¹d spójnoœci testów. znalezione_testy: ",$znalezione_testy
 				write-host "Uwaga!!! Wykryto nie wyœwietlane testy"
-				if($checkMe1.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
+				if($checkMe0.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
 			}
 			
 		}
@@ -1228,7 +1346,7 @@ function Dzialaj()
 	
 	foreach($path in (Get-ChildItem $sciezka))
 	{
-		write-host $path,$path.LastWriteTime
+		if($checkMe1.Checked){write-host $path,$path.LastWriteTime}
 		if((Get-Item $path.FULLNAME) -is [System.IO.DirectoryInfo])
 		{
 			#wype³nanie tabeli aktualnym statusem pracy
