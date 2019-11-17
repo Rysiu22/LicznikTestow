@@ -1346,7 +1346,7 @@ function Dzialaj()
 	
 	foreach($path in (Get-ChildItem $sciezka))
 	{
-		if($checkMe1.Checked){write-host $path,$path.LastWriteTime}
+		write-host $path,$path.LastWriteTime
 		if((Get-Item $path.FULLNAME) -is [System.IO.DirectoryInfo])
 		{
 			#wype³nanie tabeli aktualnym statusem pracy
@@ -1401,6 +1401,8 @@ function Odswiez()
 	
 	$label6.Text="£¹cznie folderów: " + ($Wynik.keys).COUNT
 	$label6.Refresh()
+	
+	$i = 0
 
 	foreach($modul in ($Wynik.keys | Sort-Object ) )
 	{
@@ -1414,7 +1416,7 @@ function Odswiez()
 			{
 				if($checkMe1.Checked){write-host "key{$modul : {$year : {$week : ... }}} count value:", $Wynik[$modul][$year].$week.Length, $Wynik.$modul.$year.$week["FPY"],$Wynik.$modul.$year.$week["PY"],$Wynik.$modul.$year.$week["sum"]}
 				
-				if($checkMe1.Checked){write-host ($Wynik.$modul.$year.$week["pliki"] | ConvertTo-JSON -Depth 2)}
+				#if($checkMe1.Checked){write-host ($Wynik.$modul.$year.$week["pliki"] | ConvertTo-JSON -Depth 2)}
 				
 				#jeœli rok = 0 to pomija wszelkie restrykcjie czasowe
 				if($testRok -ne "0")
@@ -1441,6 +1443,10 @@ function Odswiez()
 				#wype³nanie tabeli
 				$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($modul, $week, $year, $Wynik.$modul.$year.$week["FPY"], $Wynik.$modul.$year.$week["FTT"], $Wynik.$modul.$year.$week["PY"], $Wynik.$modul.$year.$week["sum_moduly"], $Wynik.$modul.$year.$week["sum_pass"], $Wynik.$modul.$year.$week["sum_test"])), -1)
 				#$ListViewItem.StateImageIndex = 0
+				if(($i++ % 2) -eq 0)
+				{
+					$ListViewItem.BackColor = [System.Drawing.Color]::LightGray;
+				}
 				$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))
 				#$listView.Refresh()
 			}
