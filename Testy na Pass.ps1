@@ -28,7 +28,7 @@ $ile_lini_czytac = 15
 # 2019.11.08 - 4h
 # 2019.11.09 - 9,5h - wczytanie kompletnych danych z nag³óka i generowanie z nich danych, filtrowanie nazw tylko przy generowaniu
 # 2019.11.11 - 9h
-# 2019.12.03 - 3h - 7:00-22:00 dodano wczytywanie wzorców z osobnego pliku, poprawienie kolorów podczas sortowania, suma tygodni tylko podczas ³adowania
+# 2019.12.03 - 3,5h - 7:00-22:30 dodano wczytywanie wzorców z osobnego pliku, poprawienie kolorów podczas sortowania, suma tygodni tylko podczas ³adowania, testy z klinanym menu
 
 $title = "Testy na Pass GUI wersja. 7G"
 
@@ -310,6 +310,15 @@ $ListView.View = [System.Windows.Forms.View]::Details
 $ListView.FullRowSelect = $true;
 
 
+
+$contextMenuStrip1 = New-Object System.Windows.Forms.ContextMenuStrip
+$contextMenuStrip1.Items.Add("Pliki").add_Click({Logi($ListView.SelectedItems.SubItems)})
+$contextMenuStrip1.Items.Add("Test").add_Click({GetStringFromUser "TEST" "Test"})
+
+#$ListView.ContextMenu = $contextMenuStrip1
+#$ListView.ShortcutsEnabled = $false
+$ListView.ContextMenuStrip = $contextMenuStrip1
+
 #sortowanie kolumn
 
 #https://stackoverflow.com/questions/35871501/listview-sort-doesnt-work-onclick-powershell
@@ -485,7 +494,7 @@ function Logi($item)
 
 #https://community.spiceworks.com/topic/1982317-catch-colum-value-fromchecked-items
 #$ListView.Add_MouseClick({[System.Windows.Forms.MessageBox]::Show($ListView.SelectedItems[0].Text,'Info')})
-$ListView.Add_MouseClick({Logi($ListView.SelectedItems.SubItems)})
+#$ListView.Add_MouseClick({Logi($ListView.SelectedItems.SubItems)})
 
 
 
