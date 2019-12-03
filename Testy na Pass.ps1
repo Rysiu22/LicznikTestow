@@ -11,14 +11,7 @@ $wielkosc_czcionki_okna = 10
 $rozmiar_kolumn = 105
 $wysokosc_okna = 500
 
-#wyjaœnienie wzorca (wielkoœæ liter ma znaczenie):
-#. jeden dowolny znak
-#\. kropka
-#\w+ znaki alfabetyczne, conajmniej jeden
-#\d+ cyfry, conajmniej jedna
-#\d{10} dok³adnie 10 cyfr
-$wzorzec_karty = "\w+\d+-\d+_B\d+W\d+S\d+_\d+\.txt"
-$wzorzec_wzmacniacza = "10P000ABT\d+_AMMAWZ\d{10}_\d+\.txt"
+$plik_wzorcow = "wzorce_nazw_plikow.ini"
 
 $ile_lini_czytac = 15
 
@@ -35,8 +28,9 @@ $ile_lini_czytac = 15
 # 2019.11.08 - 4h
 # 2019.11.09 - 9,5h - wczytanie kompletnych danych z nag³óka i generowanie z nich danych, filtrowanie nazw tylko przy generowaniu
 # 2019.11.11 - 9h
+# 2019.12.03 - 3h - 7:00-22:00 dodano wczytywanie wzorców z osobnego pliku, poprawienie kolorów podczas sortowania, suma tygodni tylko podczas ³adowania
 
-$title = "Testy na Pass GUI wersja. 7F"
+$title = "Testy na Pass GUI wersja. 7G"
 
 #przechowuje dane pobrane z plików
 $Wynik = [ordered]@{}
@@ -97,11 +91,11 @@ $UserGMenu2 = New-Object System.Windows.Forms.ToolStripMenuItem
 $UserGMenu3 = New-Object System.Windows.Forms.ToolStripMenuItem
 $UserGMenu4 = New-Object System.Windows.Forms.ToolStripMenuItem
 $UserGMenu5 = New-Object System.Windows.Forms.ToolStripMenuItem
-$MenuBar.Items.Add($UserGMenu1)
-$MenuBar.Items.Add($UserGMenu2)
-$MenuBar.Items.Add($UserGMenu3)
-$MenuBar.Items.Add($UserGMenu4)
-$MenuBar.Items.Add($UserGMenu5)
+$MenuBar.Items.Add($UserGMenu1) | Out-Null
+$MenuBar.Items.Add($UserGMenu2) | Out-Null
+$MenuBar.Items.Add($UserGMenu3) | Out-Null
+$MenuBar.Items.Add($UserGMenu4) | Out-Null
+$MenuBar.Items.Add($UserGMenu5) | Out-Null
 $UserGMenu1.Text = "&Plik"
 $UserGMenu2.Text = "&Akcja"
 $UserGMenu3.Text = "&Wzorzec Nazw"
@@ -131,7 +125,7 @@ ForEach ($GroupUserKey in ($DropDownGUsers1Dict.keys | Sort-Object)) {
 	$GroupValue.Text = $GroupUserKey.Substring(2)
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
-	$UserGMenu1.DropDownItems.Add($GroupValue)
+	$UserGMenu1.DropDownItems.Add($GroupValue) | Out-Null
 	# use name to identify control
 	$GroupValue.Add_Click( $DropDownGUsers1Dict[$GroupUserKey] )
 }
@@ -150,37 +144,45 @@ ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
 	$GroupValue.Text = $GroupUserKey.Substring(2)
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
-	$UserGMenu2.DropDownItems.Add($GroupValue)
+	$UserGMenu2.DropDownItems.Add($GroupValue) | Out-Null
 	# use name to identify control
 	$GroupValue.Add_Click( $DropDownGUsers2Dict[$GroupUserKey] )
 }
 
 $DropDownGUsers3Dict=@{
-	'1 Wszystko: .*' = {
-		$script:myRegxFile=".*"; 
+	'1 W³asny' = {
+		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxFile;
+		if($tmp){$script:myRegxFile=$tmp};
 		$label8.Text="wzorzec: ",$myRegxFile; 
 		$label8.Refresh();
 		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
-	"2 Karta: $wzorzec_karty" = {
-		$script:myRegxFile=$wzorzec_karty; 
-		$label8.Text="wzorzec: ",$myRegxFile; 
+	'2 Wszystko: .*' = {
+		$script:myRegxFile=".*";
+		$label8.Text="wzorzec: ",$myRegxFile;
 		$label8.Refresh();
 		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
-	"3 Wzmacniacz: $wzorzec_wzmacniacza" = {
-		$script:myRegxFile=$wzorzec_wzmacniacza; 
-		$label8.Text="wzorzec: ",$myRegxFile; 
-		$label8.Refresh();
-		$Wynik = ObliczPonownie $Wynik; Odswiez;
-		};
-	'4 W³asny' = {
-		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxFile; 
-		if($tmp){$script:myRegxFile=$tmp}; 
-		$label8.Text="wzorzec: ",$myRegxFile; 
-		$label8.Refresh();
-		$Wynik = ObliczPonownie $Wynik; Odswiez;
-		};
+}
+
+#czyta zawartoœæ pliku z wzorcami i dodaje wzorce do menu
+If([System.IO.File]::Exists($plik_wzorcow))
+{
+	$i = 3
+	ForEach($item in @(GET-CONTENT $plik_wzorcow | ForEach-Object{[Regex]::Escape($_) | Select-String -Pattern '.+=.*' } | ConvertFrom-StringData))
+	{
+		#write-host ($item | Out-String)
+		$DropDownGUsers3Dict[($i++).ToString() +" "+$item.Keys[0]+": "+$item.Values[0]] = {
+			$script:myRegxFile=$item.Values[0];
+			$label8.Text="wzorzec: ",($myRegxFile | Out-String);
+			$label8.Refresh();
+			$Wynik = ObliczPonownie $Wynik; Odswiez;
+			};
+	}
+}
+ELSE
+{
+	write-host "Nie znaleziono pliku z wzorcami"
 }
 
 ForEach ($GroupUserKey in ($DropDownGUsers3Dict.keys | Sort-Object)) {
@@ -189,7 +191,7 @@ ForEach ($GroupUserKey in ($DropDownGUsers3Dict.keys | Sort-Object)) {
 	$GroupValue.Text = $GroupUserKey.Substring(2)
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
-	$UserGMenu3.DropDownItems.Add($GroupValue)
+	$UserGMenu3.DropDownItems.Add($GroupValue) | Out-Null
 	# use name to identify control
 	$GroupValue.Add_Click( $DropDownGUsers3Dict[$GroupUserKey] )
 }
@@ -204,7 +206,7 @@ ForEach ($GroupUserKey in ($DropDownGUsers4Dict.keys | Sort-Object)) {
 	$GroupValue.Text = $GroupUserKey.Substring(2)
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
-	$UserGMenu4.DropDownItems.Add($GroupValue)
+	$UserGMenu4.DropDownItems.Add($GroupValue) | Out-Null
 	# use name to identify control
 	$GroupValue.Add_Click( $DropDownGUsers4Dict[$GroupUserKey] )
 }
@@ -225,7 +227,7 @@ ForEach ($GroupUserKey in ($DropDownGUsers5Dict.keys | Sort-Object)) {
 	$GroupValue.Text = $GroupUserKey.Substring(2)
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
-	$UserGMenu5.DropDownItems.Add($GroupValue)
+	$UserGMenu5.DropDownItems.Add($GroupValue) | Out-Null
 	# use name to identify control
 	$GroupValue.Add_Click( $DropDownGUsers5Dict[$GroupUserKey] )
 }
@@ -372,8 +374,23 @@ $comparerClassString = @"
 Add-Type -TypeDefinition $comparerClassString -ReferencedAssemblies ('System.Windows.Forms', 'System.Drawing')
 
 # Add the event to the ListView ColumnClick event
-$ListView.add_ColumnClick({ $listView.ListViewItemSorter = New-Object ListViewItemComparer($_.Column)})
+$ListView.add_ColumnClick({ $listView.ListViewItemSorter = New-Object ListViewItemComparer($_.Column); UstawoKolorWierszy($ListView) })
 
+
+function UstawoKolorWierszy($ListView)
+{
+	For ($i=0; $i -lt $ListView.Items.Count; $i++)
+	{
+		if(($i % 2) -eq 0)
+		{
+			$ListView.Items[$i].BackColor = [System.Drawing.Color]::LightGray;
+		}
+		else
+		{
+			$ListView.Items[$i].BackColor = [System.Drawing.Color]::White;
+		}
+	}
+}
 
 #$ListView.Controls.Add($textBox1)
 
@@ -425,12 +442,12 @@ function Logi($item)
 	$LVcol5 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol5.TextAlign = $MyTextAlign
 	$LVcol5.Text = "test"
-
+	
+	# Add the event to the ListView ColumnClick event
+	$ListView.add_ColumnClick({ $listView.ListViewItemSorter = New-Object ListViewItemComparer($_.Column); UstawoKolorWierszy($ListView) })
 
 	$ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVcol2, $LVcol3, $LVcol4, $LVcol5 )))
 
-	
-	
 	#write-host "Files:",($Files.gettype() | Out-String)
 	#write-host "Items:",($Files | Out-String)
 	
@@ -447,7 +464,7 @@ function Logi($item)
 		}
 	}
 	
-
+	
 	foreach($nazwa in ($fileContent.keys | Sort-Object ) )
 	{
 		#write-host "Nazwa:",($Files[$nazwa].gettype() | Out-String)
@@ -460,7 +477,9 @@ function Logi($item)
 		$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))
 		#$listView.Refresh()
 	}
-
+	
+	UstawoKolorWierszy($ListView)
+	
 	$form.ShowDialog()
 }
 
@@ -546,7 +565,7 @@ $ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVc
 $checkMe0=New-Object System.Windows.Forms.CheckBox
 $checkMe0.Location=New-Object System.Drawing.Size(($Right_Row_Button+210),55)
 $checkMe0.Size=New-Object System.Drawing.Size(100,30)
-$checkMe0.Text="Debug2"
+$checkMe0.Text="Sumuj tygodnie"
 $checkMe0.TabIndex=1
 $checkMe0.Checked=$false
 $checkMe0.Font = $MyFont
@@ -818,7 +837,7 @@ function LoadData()
 			{
 				#write-host "Uwaga!!! Wykryto b³¹d spójnoœci testów. znalezione_testy: ",$znalezione_testy
 				write-host "Uwaga!!! Wykryto nie wyœwietlane testy"
-				if($checkMe0.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
+				if($checkMe1.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
 			}
 			
 		}
@@ -885,14 +904,30 @@ function GetList()
 			$Dict[$rok] = @{}
 		}
 
-		if($Dict[$rok][$plik_tydzien].Length -eq 0)
-		{
-			$Dict[$rok][$plik_tydzien] = @($plik)
-		}
-		else
-		{
-			$Dict[$rok][$plik_tydzien] += $plik
-		}
+        IF($checkMe0.Checked)
+        {
+			#wszystkie takie same rekordy sumuje razem (sumuje tygodnie razem)
+		    if($Dict[$rok][$od_t].Length -eq 0)
+		    {
+			    $Dict[$rok][$od_t] = @($plik)
+		    }
+		    else
+		    {
+			    $Dict[$rok][$od_t] += $plik
+		    }
+        }
+        else
+        {
+			#dzia³a normalnie
+		    if($Dict[$rok][$plik_tydzien].Length -eq 0)
+		    {
+			    $Dict[$rok][$plik_tydzien] = @($plik)
+		    }
+		    else
+		    {
+			    $Dict[$rok][$plik_tydzien] += $plik
+		    }
+        }
 		#write-host "check_end",$Dict[$plik_tydzien].Length
 	}
 
@@ -1082,7 +1117,7 @@ function GetList()
 			{
 				#write-host "Uwaga!!! Wykryto b³¹d spójnoœci testów. znalezione_testy: ",$znalezione_testy
 				write-host "Uwaga!!! Wykryto nie wyœwietlane testy"
-				if($checkMe0.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
+				if($checkMe1.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
 			}
 			
 		}
@@ -1401,8 +1436,6 @@ function Odswiez()
 	
 	$label6.Text="£¹cznie folderów: " + ($Wynik.keys).COUNT
 	$label6.Refresh()
-	
-	$i = 0
 
 	foreach($modul in ($Wynik.keys | Sort-Object ) )
 	{
@@ -1443,16 +1476,14 @@ function Odswiez()
 				#wype³nanie tabeli
 				$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($modul, $week, $year, $Wynik.$modul.$year.$week["FPY"], $Wynik.$modul.$year.$week["FTT"], $Wynik.$modul.$year.$week["PY"], $Wynik.$modul.$year.$week["sum_moduly"], $Wynik.$modul.$year.$week["sum_pass"], $Wynik.$modul.$year.$week["sum_test"])), -1)
 				#$ListViewItem.StateImageIndex = 0
-				if(($i++ % 2) -eq 0)
-				{
-					$ListViewItem.BackColor = [System.Drawing.Color]::LightGray;
-				}
 				$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))
 				#$listView.Refresh()
 			}
 		}
 		
 	}
+	
+	UstawoKolorWierszy($ListView)
 	
 	#$label6.Text="Wyników: " + ($ListView.Items).COUNT
 	#$label6.Refresh()
