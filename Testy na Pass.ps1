@@ -16,7 +16,7 @@ $debug = 0
 $Right_Row_Button = 800
 $wielkosc_czcionki_okna = 10
 $rozmiar_kolumn = 105
-$wysokosc_okna = 500
+$wysokosc_okna = 620
 
 $plik_wzorcow = "wzorce_nazw_plikow.ini"
 
@@ -85,7 +85,7 @@ $dzien=get-date -UFormat "%Y-%m-%d"
 Add-Type -AssemblyName System.Windows.Forms
 $form = New-Object System.Windows.Forms.Form
 $form.Text=$title
-$form.Size=New-Object System.Drawing.Size(($Right_Row_Button+300), ($wysokosc_okna+120))
+$form.Size=New-Object System.Drawing.Size(($Right_Row_Button+300), $wysokosc_okna)
 $form.StartPosition='CenterScreen'
 #$form.topmost = $true
 
@@ -326,16 +326,16 @@ $form.Controls.Add($label7)
 $label8=New-Object System.Windows.Forms.label
 $label8.Text="wzorzec: ",$myRegxFile
 $label8.AutoSize=$True
-$label8.Top="255"
-$label8.Left=$Right_Row_Button
+$label8.Top="55"
+$label8.Left=10
 $label8.Anchor="Left,Top"
 $label8.Font = $MyFont
 $form.Controls.Add($label8)
 
 #OKNO Z KOLUMNAMI
 $listView = New-Object System.Windows.Forms.ListView
-$ListView.Location = New-Object System.Drawing.Point(10, 55)
-$ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20),$wysokosc_okna)
+$ListView.Location = New-Object System.Drawing.Point(10, 80)
+$ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20),($wysokosc_okna - 130))
 $ListView.View = [System.Windows.Forms.View]::Details
 $ListView.FullRowSelect = $true;
 
@@ -487,13 +487,13 @@ function Logi($item)
 	Add-Type -AssemblyName System.Windows.Forms
 	$form = New-Object System.Windows.Forms.Form
 	$form.Text=$item[0].Text
-	$form.Size=New-Object System.Drawing.Size(($Right_Row_Button+300), ($wysokosc_okna+120))
+	$form.Size=New-Object System.Drawing.Size(($Right_Row_Button+300), $wysokosc_okna)
 	$form.StartPosition='CenterScreen'
 
 	#OKNO Z KOLUMNAMI
 	$listView = New-Object System.Windows.Forms.ListView
-	$ListView.Location = New-Object System.Drawing.Point(10, 55)
-	$ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20 + 250),$wysokosc_okna)
+	$ListView.Location = New-Object System.Drawing.Point(10, 15)
+	$ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20 + 250),($wysokosc_okna - 70))
 	$ListView.View = [System.Windows.Forms.View]::Details
 	$ListView.FullRowSelect = $true;
 	$ListView.Font = $MyFont
