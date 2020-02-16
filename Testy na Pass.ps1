@@ -38,7 +38,8 @@ $ile_lini_czytac = 15
 # 2019.11.08 - 4h
 # 2019.11.09 - 9,5h - wczytanie kompletnych danych z nag³óka i generowanie z nich danych, filtrowanie nazw tylko przy generowaniu
 # 2019.11.11 - 9h
-# 2019.12.03 - 3,5h - 7:00-22:30 dodano wczytywanie wzorców z osobnego pliku, poprawienie kolorów podczas sortowania, suma tygodni tylko podczas ³adowania, testy z klinanym menu
+# 2019.12.03 - 3,5h - 19:00-22:30 dodano wczytywanie wzorców z osobnego pliku, poprawienie kolorów podczas sortowania, suma tygodni tylko podczas ³adowania, testy z klinanym menu
+# 2020.02.16 - 2,5h
 
 $title = "Testy na Pass GUI wersja. 7G"
 
@@ -346,14 +347,31 @@ $contextMenuStrip1.Items.Add("Kopiuj FP, FTT").add_Click(
 {
 	$item=$ListView.SelectedItems.SubItems;
 	$tmp=$Wynik[$item[0].Text][$item[2].Text][$item[1].Text]
-	(($tmp["FPY"]).ToString() + "	" + ($tmp["FTT"]).ToString() | Set-Clipboard)
+	if(($tmp["FPY"]).ToString() -ne $item[3].Text -or ($tmp["FTT"]).ToString() -ne $item[4].Text)
+	{
+		write-host("Uwaga skopiowana wartoœæ mo¿e byæ nie poprawna")
+	}
+	#(($tmp["FPY"]).ToString() + "	" + ($tmp["FTT"]).ToString() | Set-Clipboard)
+	($item[3].Text + "	" + $item[4].Text | Set-Clipboard)
 })
 
 $contextMenuStrip1.Items.Add("Kopiuj PY, Modu³ów Suma").add_Click(
 {
 	$item=$ListView.SelectedItems.SubItems;
 	$tmp=$Wynik[$item[0].Text][$item[2].Text][$item[1].Text]
-	(($tmp["PY"]).ToString() + "	" + ($tmp["sum_moduly"]).ToString() | Set-Clipboard)
+	if(($tmp["PY"]).ToString() -ne $item[5].Text -or ($tmp["sum_moduly"]).ToString() -ne $item[6].Text)
+	{
+		write-host("Uwaga skopiowana wartoœæ mo¿e byæ nie poprawna")
+	}
+	#(($tmp["PY"]).ToString() + "	" + ($tmp["sum_moduly"]).ToString() | Set-Clipboard)
+	($item[5].Text + "	" + $item[6].Text | Set-Clipboard)
+})
+
+$contextMenuStrip1.Items.Add("Kopiuj ca³y wiersz").add_Click(
+{
+	$item=$ListView.SelectedItems.SubItems;
+	#write-host ($item | Select-Object -Property Text)
+	($item | Select-Object -ExpandProperty Text) -join "`t" | Set-Clipboard
 })
 
 #$ListView.ContextMenu = $contextMenuStrip1
@@ -473,36 +491,62 @@ function Logi($item)
 	$form.Controls.Add($ListView)
 
 	$MyTextAlign = [System.Windows.Forms.HorizontalAlignment]::Left;
+	
+	#"PN#0","SN#0","PN#1","SN#1","RESULT","START","USER","ERRORS","FAILS","SEQ_FILE","SEQ_MD5"
 
 	#Nazwy kolumn
 	$LVcol1 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol1.TextAlign = $MyTextAlign
 	$LVcol1.Text = "Nazwa"
-	#$LVcol1.Width = $rozmiar_kolumn*3
 
 	$LVcol2 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol2.TextAlign = $MyTextAlign
-	$LVcol2.Text = "Result"
+	$LVcol2.Text = "PN#0"
 
 	$LVcol3 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol3.TextAlign = $MyTextAlign
-	$LVcol3.Text = "SEQ_MD5"
-	#$LVcol3.Width = $rozmiar_kolumn
+	$LVcol3.Text = "SN#0"
 	
 	$LVcol4 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol4.TextAlign = $MyTextAlign
-	$LVcol4.Text = "START"
-	#$LVcol4.Width = $rozmiar_kolumn*2
-	
+	$LVcol4.Text = "PN#1"
+
 	$LVcol5 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol5.TextAlign = $MyTextAlign
-	$LVcol5.Text = "SEQ_FILE"
-	#$LVcol5.Width = $rozmiar_kolumn*8
+	$LVcol5.Text = "SN#1"
 	
+	$LVcol6 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol6.TextAlign = $MyTextAlign
+	$LVcol6.Text = "RESULT"
+	
+	$LVcol7 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol7.TextAlign = $MyTextAlign
+	$LVcol7.Text = "START"
+
+	$LVcol8 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol8.TextAlign = $MyTextAlign
+	$LVcol8.Text = "USER"
+	
+	$LVcol9 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol9.TextAlign = $MyTextAlign
+	$LVcol9.Text = "ERRORS"
+	
+	$LVcol10 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol10.TextAlign = $MyTextAlign
+	$LVcol10.Text = "FAILS"
+	
+	$LVcol11 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol11.TextAlign = $MyTextAlign
+	$LVcol11.Text = "SEQ_FILE"
+
+	$LVcol12 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol12.TextAlign = $MyTextAlign
+	$LVcol12.Text = "SEQ_MD5"
+
 	# Add the event to the ListView ColumnClick event
 	$ListView.add_ColumnClick({ $listView.ListViewItemSorter = New-Object ListViewItemComparer($_.Column); UstawoKolorWierszy($ListView) })
 
-	$ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVcol2, $LVcol3, $LVcol4, $LVcol5 )))
+	$ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVcol2, $LVcol3, $LVcol4, $LVcol5, $LVcol6,  $LVcol7, $LVcol8, $LVcol9, $LVcol10, $LVcol11, $LVcol12 )))
 
 	#write-host "Files:",($Files.gettype() | Out-String)
 	#write-host "Items:",($Files | Out-String)
@@ -528,7 +572,7 @@ function Logi($item)
 				
 		#write-host "Nazwa:",($Files[$nazwa].keys | Out-String)
 		#wype³nanie tabeli
-		$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($nazwa, (findMyColumn("result")), (findMyColumn("SEQ_MD5")),  (findMyColumn("START")),  (findMyColumn("SEQ_FILE")) )), -1) #, , , , , , , 
+		$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($nazwa, (findMyColumn("PN\#0")), (findMyColumn("SN\#0")), (findMyColumn("PN\#1")), (findMyColumn("SN\#1")), (findMyColumn("RESULT")), (findMyColumn("START")), (findMyColumn("USER")), (findMyColumn("ERRORS")), (findMyColumn("FAILS")), (findMyColumn("SEQ_FILE")), (findMyColumn("SEQ_MD5")) )), -1) #, , , , , , , 
 		#$ListViewItem.StateImageIndex = 0
 		$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))
 		#$listView.Refresh()
@@ -537,6 +581,18 @@ function Logi($item)
 	$listView.AutoResizeColumns([System.Windows.Forms.ColumnHeaderAutoResizeStyle]::ColumnContent);
 	
 	UstawoKolorWierszy($ListView)
+	
+	$contextMenuStrip1 = New-Object System.Windows.Forms.ContextMenuStrip
+
+	$contextMenuStrip1.Items.Add("Kopiuj ca³y wiersz").add_Click(
+	{
+		$item=$ListView.SelectedItems.SubItems;
+		write-host ($item.Length)
+		write-host ($item | Select-Object -ExpandProperty Text)
+		($item | Select-Object -ExpandProperty Text) -join "`t" | Set-Clipboard
+	})
+
+	$ListView.ContextMenuStrip = $contextMenuStrip1
 	
 	$form.ShowDialog()
 }
@@ -647,7 +703,7 @@ $checkMe2.Text="??"
 $checkMe2.TabIndex=1
 $checkMe2.Checked=$true
 $checkMe2.Font = $MyFont
-$form.Controls.Add($checkMe2)
+#$form.Controls.Add($checkMe2)
 
 #CHECKBOX 3
 $checkMe3=New-Object System.Windows.Forms.CheckBox
