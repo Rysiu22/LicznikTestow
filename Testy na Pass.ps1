@@ -1,6 +1,13 @@
 #zlicza udane testy z danego tygodznia
 
 
+function Get-WeekNumber([datetime]$DateTime = (Get-Date)) 
+{
+	$ci = [System.Globalization.CultureInfo]::CurrentCulture
+	($ci.Calendar.GetWeekOfYear($DateTime,$ci.DateTimeFormat.CalendarWeekRule,$ci.DateTimeFormat.FirstDayOfWeek)).ToString()
+}
+
+
 #dane do edycji:
 #czy wyœwietlaæ dodatkowe informacje, bêdzie dzia³aæ wolniej
 $debug = 0
@@ -12,6 +19,9 @@ $rozmiar_kolumn = 105
 $wysokosc_okna = 500
 
 $plik_wzorcow = "wzorce_nazw_plikow.ini"
+
+$wzorzec_karty = "\w+\d+-\d+_B\d+W\d+S\d+_\d+\.txt"
+$wzorzec_wzmacniacza = "10P000ABT\d+_AMMAWZ\d{10}_\d+\.txt"
 
 $ile_lini_czytac = 15
 
@@ -131,7 +141,7 @@ ForEach ($GroupUserKey in ($DropDownGUsers1Dict.keys | Sort-Object)) {
 }
 
 $DropDownGUsers2Dict=@{
-	'1 Odœwie¿'={Odswiez}; 
+	#'1 Odœwie¿'={Odswiez}; 
 	'2 £aduj'={Dzialaj}; 
 	'3 Zmieñ Folder'={ChangeFolder}
 	'4 Przelicz ponownie'={$Wynik = ObliczPonownie $Wynik; Odswiez};
@@ -150,16 +160,28 @@ ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
 }
 
 $DropDownGUsers3Dict=@{
-	'1 W³asny' = {
-		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxFile;
-		if($tmp){$script:myRegxFile=$tmp};
+	'1 Wszystko: .*' = {
+		$script:myRegxFile=".*"; 
 		$label8.Text="wzorzec: ",$myRegxFile; 
 		$label8.Refresh();
 		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
-	'2 Wszystko: .*' = {
-		$script:myRegxFile=".*";
+	"2 Karta: $wzorzec_karty" = {
+		$script:myRegxFile=$wzorzec_karty;
 		$label8.Text="wzorzec: ",$myRegxFile;
+		$label8.Refresh();
+		$Wynik = ObliczPonownie $Wynik; Odswiez;
+		};
+	"3 Wzmacniacz: $wzorzec_wzmacniacza" = {
+		$script:myRegxFile=$wzorzec_wzmacniacza;
+		$label8.Text="wzorzec: ",$myRegxFile; 
+		$label8.Refresh();
+		$Wynik = ObliczPonownie $Wynik; Odswiez;
+		};
+	'4 W³asny' = {
+		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxFile; 
+		if($tmp){$script:myRegxFile=$tmp}; 
+		$label8.Text="wzorzec: ",$myRegxFile; 
 		$label8.Refresh();
 		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
@@ -168,17 +190,24 @@ $DropDownGUsers3Dict=@{
 #czyta zawartoœæ pliku z wzorcami i dodaje wzorce do menu
 If([System.IO.File]::Exists($plik_wzorcow))
 {
-	$i = 3
-	ForEach($item in @(GET-CONTENT $plik_wzorcow | ForEach-Object{[Regex]::Escape($_) | Select-String -Pattern '.+=.*' } | ConvertFrom-StringData))
+'
+	$wzorce = @(GET-CONTENT $plik_wzorcow | ForEach-Object{[Regex]::Escape($_) | Select-String -Pattern ".+=.*" } | ConvertFrom-StringData)
+	$i = 5
+	ForEach($key in $wzorce.keys)
 	{
-		#write-host ($item | Out-String)
-		$DropDownGUsers3Dict[($i++).ToString() +" "+$item.Keys[0]+": "+$item.Values[0]] = {
-			$script:myRegxFile=$item.Values[0];
+		#write-host ($key | Out-String)
+		$tmpu = $key
+		$key = ($i++).ToString() +" "+$key+": "+$wzorce.$key
+		$DropDownGUsers3Dict.Add($key, {
+			#write-host ($tmpu | Out-String);
+			$script:myRegxFile=($wzorce.$key | Out-String);
 			$label8.Text="wzorzec: ",($myRegxFile | Out-String);
 			$label8.Refresh();
 			$Wynik = ObliczPonownie $Wynik; Odswiez;
-			};
+			}
+			)
 	}
+'
 }
 ELSE
 {
@@ -284,7 +313,7 @@ $form.Controls.Add($label6)
 
 #7 linia
 $label7=New-Object System.Windows.Forms.label
-$label7.Text="Aktualny tydzieñ: " + (get-date -UFormat %V)
+$label7.Text="Aktualny tydzieñ: " + (Get-WeekNumber) + " DATA: " + (get-date -UFormat "%Y-%m-%d")
 $label7.AutoSize=$True
 $label7.Top="225"
 $label7.Left=$Right_Row_Button
@@ -313,7 +342,19 @@ $ListView.FullRowSelect = $true;
 
 $contextMenuStrip1 = New-Object System.Windows.Forms.ContextMenuStrip
 $contextMenuStrip1.Items.Add("Pliki").add_Click({Logi($ListView.SelectedItems.SubItems)})
-$contextMenuStrip1.Items.Add("Test").add_Click({GetStringFromUser "TEST" "Test"})
+$contextMenuStrip1.Items.Add("Kopiuj FP, FTT").add_Click(
+{
+	$item=$ListView.SelectedItems.SubItems;
+	$tmp=$Wynik[$item[0].Text][$item[2].Text][$item[1].Text]
+	(($tmp["FPY"]).ToString() + "	" + ($tmp["FTT"]).ToString() | Set-Clipboard)
+})
+
+$contextMenuStrip1.Items.Add("Kopiuj PY, Modu³ów Suma").add_Click(
+{
+	$item=$ListView.SelectedItems.SubItems;
+	$tmp=$Wynik[$item[0].Text][$item[2].Text][$item[1].Text]
+	(($tmp["PY"]).ToString() + "	" + ($tmp["sum_moduly"]).ToString() | Set-Clipboard)
+})
 
 #$ListView.ContextMenu = $contextMenuStrip1
 #$ListView.ShortcutsEnabled = $false
@@ -405,10 +446,15 @@ function UstawoKolorWierszy($ListView)
 
 function Logi($item)
 {
+	if(! $item)
+	{
+		return
+	}
 	$fileContent = @{}
 
 	$Wynik[$item[0].Text][$item[2].Text][$item[1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
 
+	if($checkMe1.Checked){write-host ($fileContent | ConvertTo-JSON -Depth 2)}
 	
 	#Tworzenie okna programu
 	Add-Type -AssemblyName System.Windows.Forms
@@ -420,7 +466,7 @@ function Logi($item)
 	#OKNO Z KOLUMNAMI
 	$listView = New-Object System.Windows.Forms.ListView
 	$ListView.Location = New-Object System.Drawing.Point(10, 55)
-	$ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20),$wysokosc_okna)
+	$ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20 + 250),$wysokosc_okna)
 	$ListView.View = [System.Windows.Forms.View]::Details
 	$ListView.FullRowSelect = $true;
 	$ListView.Font = $MyFont
@@ -432,7 +478,7 @@ function Logi($item)
 	$LVcol1 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol1.TextAlign = $MyTextAlign
 	$LVcol1.Text = "Nazwa"
-	$LVcol1.Width = $rozmiar_kolumn*3
+	#$LVcol1.Width = $rozmiar_kolumn*3
 
 	$LVcol2 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol2.TextAlign = $MyTextAlign
@@ -441,16 +487,17 @@ function Logi($item)
 	$LVcol3 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol3.TextAlign = $MyTextAlign
 	$LVcol3.Text = "SEQ_MD5"
-	$LVcol3.Width = $rozmiar_kolumn
+	#$LVcol3.Width = $rozmiar_kolumn
 	
 	$LVcol4 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol4.TextAlign = $MyTextAlign
 	$LVcol4.Text = "START"
-	$LVcol4.Width = $rozmiar_kolumn*2
+	#$LVcol4.Width = $rozmiar_kolumn*2
 	
 	$LVcol5 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol5.TextAlign = $MyTextAlign
-	$LVcol5.Text = "test"
+	$LVcol5.Text = "SEQ_FILE"
+	#$LVcol5.Width = $rozmiar_kolumn*8
 	
 	# Add the event to the ListView ColumnClick event
 	$ListView.add_ColumnClick({ $listView.ListViewItemSorter = New-Object ListViewItemComparer($_.Column); UstawoKolorWierszy($ListView) })
@@ -481,11 +528,13 @@ function Logi($item)
 				
 		#write-host "Nazwa:",($Files[$nazwa].keys | Out-String)
 		#wype³nanie tabeli
-		$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($nazwa, (findMyColumn("result")), (findMyColumn("SEQ_MD5")),  (findMyColumn("START")),  (findMyColumn("test")) )), -1) #, , , , , , , 
+		$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($nazwa, (findMyColumn("result")), (findMyColumn("SEQ_MD5")),  (findMyColumn("START")),  (findMyColumn("SEQ_FILE")) )), -1) #, , , , , , , 
 		#$ListViewItem.StateImageIndex = 0
 		$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))
 		#$listView.Refresh()
 	}
+	
+	$listView.AutoResizeColumns([System.Windows.Forms.ColumnHeaderAutoResizeStyle]::ColumnContent);
 	
 	UstawoKolorWierszy($ListView)
 	
@@ -594,7 +643,7 @@ $form.Controls.Add($checkMe1)
 $checkMe2=New-Object System.Windows.Forms.CheckBox
 $checkMe2.Location=New-Object System.Drawing.Size(($Right_Row_Button+10),305)
 $checkMe2.Size=New-Object System.Drawing.Size(150,30)
-$checkMe2.Text="Nowy Tryb £adowania"
+$checkMe2.Text="??"
 $checkMe2.TabIndex=1
 $checkMe2.Checked=$true
 $checkMe2.Font = $MyFont
@@ -774,6 +823,7 @@ function LoadData()
 			#PY
 			$lista_pass = @()
 			$lista_fail = @()
+            $lista = @()
 
 			#ile modu³ów zosta³o przetestowanych
 			$lista_last_test = Zliczaj2($fileContent.GetEnumerator())
@@ -801,10 +851,12 @@ function LoadData()
 							{
 								#$lista_pass += $fc.Name #nazwa pliku
 								$lista_pass += $fc
+                                $lista += $fc
 							}
 							elseif($ff[$cf] -match "fail")
 							{
 								$lista_fail += $fc
+                                $lista += $fc
 							}
 							else
 							{
@@ -826,7 +878,7 @@ function LoadData()
 			if($checkMe1.Checked){write-host "FP:",(($lista_pass.Name | WHERE-OBJECT { $_ -MATCH "_0.txt" }) | Out-String)}
 
 			#FTT
-			$lista_first=@(($lista_pass.Name + $lista_fail.Name) | WHERE-OBJECT { $_ -MATCH "_0.txt" })
+			$lista_first=@(($lista.Name) | WHERE-OBJECT { $_ -MATCH "_0.txt" })
 			if($checkMe1.Checked){write-host "FTT:",((($lista_pass.Name + $lista_fail.Name) | WHERE-OBJECT { $_ -MATCH "_0.txt" }) | Out-String)}
 			
 			$znalezione_testy = $lista_pass.Length + $lista_fail.Length
@@ -885,7 +937,7 @@ function GetList()
 	foreach($plik in $pliki)
 	{
 		$rok = (get-date $plik.LastWriteTime -UFormat %Y)
-		$plik_tydzien = (get-date $plik.LastWriteTime -UFormat %V)
+		$plik_tydzien = (Get-WeekNumber (get-date $plik.LastWriteTime -UFormat "%Y-%m-%d"))
 		#if($debug){write-host $plik, (get-date $plik.LastWriteTime -UFormat "%Y.%V")}
 		
 		#jeœli rok = 0 to pomija wszelkie restrykcjie czasowe
@@ -969,7 +1021,7 @@ function GetList()
 		
 		foreach($week in ($Dict[$year].keys)) # | Sort-Object {[double]$_}))
 		{
-			if($checkMe2.Checked)
+			if($true)
 			{
 			#otwarcie pliku i odczyt danych
 			$fileContent = @{}
@@ -1007,6 +1059,7 @@ function GetList()
 			#PY
 			$lista_pass = @()
 			$lista_fail = @()
+            $lista = @()
 
 			#ile modu³ów zosta³o przetestowanych
 			$lista_last_test = Zliczaj2($fileContent.GetEnumerator())
@@ -1034,10 +1087,12 @@ function GetList()
 							{
 								#$lista_pass += $fc.Name #nazwa pliku
 								$lista_pass += $fc
+                                $lista += $fc
 							}
 							elseif($ff[$cf] -match "fail")
 							{
 								$lista_fail += $fc
+                                $lista += $fc
 							}
 							else
 							{
@@ -1059,7 +1114,7 @@ function GetList()
 			if($checkMe1.Checked){write-host "FP:",(($lista_pass.Name | WHERE-OBJECT { $_ -MATCH "_0.txt" }) | Out-String)}
 
 			#FTT
-			$lista_first=@(($lista_pass.Name + $lista_fail.Name) | WHERE-OBJECT { $_ -MATCH "_0.txt" })
+			$lista_first=@(($lista.Name) | WHERE-OBJECT { $_ -MATCH "_0.txt" })
 			if($checkMe1.Checked){write-host "FTT:",((($lista_pass.Name + $lista_fail.Name) | WHERE-OBJECT { $_ -MATCH "_0.txt" }) | Out-String)}
 
 			
@@ -1398,6 +1453,7 @@ function Dzialaj()
 			#$ListViewItem.StateImageIndex = 0
 			$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))
 			$ListView.Refresh()
+			$form.Refresh()
 			
 			#w³aœciwe generowanie wyników
 			if($checkMe1.Checked){write-host $path.FULLNAME}
