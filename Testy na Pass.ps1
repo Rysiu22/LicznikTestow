@@ -39,7 +39,7 @@ $ile_lini_czytac = 15
 # 2019.11.09 - 9,5h - wczytanie kompletnych danych z nag³óka i generowanie z nich danych, filtrowanie nazw tylko przy generowaniu
 # 2019.11.11 - 9h
 # 2019.12.03 - 3,5h - 19:00-22:30 dodano wczytywanie wzorców z osobnego pliku, poprawienie kolorów podczas sortowania, suma tygodni tylko podczas ³adowania, testy z klinanym menu
-# 2020.02.16 - 2,5h
+# 2020.02.16 - 3,5h
 
 $title = "Testy na Pass GUI wersja. 7G"
 
@@ -370,8 +370,17 @@ $contextMenuStrip1.Items.Add("Kopiuj PY, Modu³ów Suma").add_Click(
 $contextMenuStrip1.Items.Add("Kopiuj ca³y wiersz").add_Click(
 {
 	$item=$ListView.SelectedItems.SubItems;
-	#write-host ($item | Select-Object -Property Text)
-	($item | Select-Object -ExpandProperty Text) -join "`t" | Set-Clipboard
+	$out = ""
+	for($i=0; $i -lt $item.Length; $i++)
+	{
+		if(($i % $ListView.Columns.COUNT) -eq 0 -and $i -gt 0 )
+		{
+			$out += "`n"
+		}
+		$out += ($item[$i].Text + "`t")
+	}
+	#($item | Select-Object -ExpandProperty Text) -join "`t" | Set-Clipboard
+	$out | Set-Clipboard
 })
 
 #$ListView.ContextMenu = $contextMenuStrip1
@@ -492,7 +501,7 @@ function Logi($item)
 
 	$MyTextAlign = [System.Windows.Forms.HorizontalAlignment]::Left;
 	
-	#"PN#0","SN#0","PN#1","SN#1","RESULT","START","USER","ERRORS","FAILS","SEQ_FILE","SEQ_MD5"
+	#"PN#0","SN#0","PN#1","SN#1","RESULT","START","STOP","USER","ERRORS","FAILS","SEQ_FILE","SEQ_MD5"
 
 	#Nazwy kolumn
 	$LVcol1 = New-Object System.Windows.Forms.ColumnHeader
@@ -525,28 +534,32 @@ function Logi($item)
 
 	$LVcol8 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol8.TextAlign = $MyTextAlign
-	$LVcol8.Text = "USER"
-	
+	$LVcol8.Text = "STOP"
+
 	$LVcol9 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol9.TextAlign = $MyTextAlign
-	$LVcol9.Text = "ERRORS"
+	$LVcol9.Text = "USER"
 	
 	$LVcol10 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol10.TextAlign = $MyTextAlign
-	$LVcol10.Text = "FAILS"
+	$LVcol10.Text = "ERRORS"
 	
 	$LVcol11 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol11.TextAlign = $MyTextAlign
-	$LVcol11.Text = "SEQ_FILE"
-
+	$LVcol11.Text = "FAILS"
+	
 	$LVcol12 = New-Object System.Windows.Forms.ColumnHeader
 	$LVcol12.TextAlign = $MyTextAlign
-	$LVcol12.Text = "SEQ_MD5"
+	$LVcol12.Text = "SEQ_FILE"
+
+	$LVcol13 = New-Object System.Windows.Forms.ColumnHeader
+	$LVcol13.TextAlign = $MyTextAlign
+	$LVcol13.Text = "SEQ_MD5"
 
 	# Add the event to the ListView ColumnClick event
 	$ListView.add_ColumnClick({ $listView.ListViewItemSorter = New-Object ListViewItemComparer($_.Column); UstawoKolorWierszy($ListView) })
 
-	$ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVcol2, $LVcol3, $LVcol4, $LVcol5, $LVcol6,  $LVcol7, $LVcol8, $LVcol9, $LVcol10, $LVcol11, $LVcol12 )))
+	$ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVcol2, $LVcol3, $LVcol4, $LVcol5, $LVcol6,  $LVcol7, $LVcol8, $LVcol9, $LVcol10, $LVcol11, $LVcol12, $LVcol13 )))
 
 	#write-host "Files:",($Files.gettype() | Out-String)
 	#write-host "Items:",($Files | Out-String)
@@ -560,7 +573,7 @@ function Logi($item)
 		}
 		else
 		{
-			return "."
+			return " "
 		}
 	}
 	
@@ -572,7 +585,7 @@ function Logi($item)
 				
 		#write-host "Nazwa:",($Files[$nazwa].keys | Out-String)
 		#wype³nanie tabeli
-		$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($nazwa, (findMyColumn("PN\#0")), (findMyColumn("SN\#0")), (findMyColumn("PN\#1")), (findMyColumn("SN\#1")), (findMyColumn("RESULT")), (findMyColumn("START")), (findMyColumn("USER")), (findMyColumn("ERRORS")), (findMyColumn("FAILS")), (findMyColumn("SEQ_FILE")), (findMyColumn("SEQ_MD5")) )), -1) #, , , , , , , 
+		$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($nazwa, (findMyColumn("PN\#0")), (findMyColumn("SN\#0")), (findMyColumn("PN\#1")), (findMyColumn("SN\#1")), (findMyColumn("RESULT")), (findMyColumn("START")), (findMyColumn("STOP")), (findMyColumn("USER")), (findMyColumn("ERRORS")), (findMyColumn("FAILS")), (findMyColumn("SEQ_FILE")), (findMyColumn("SEQ_MD5")) )), -1)
 		#$ListViewItem.StateImageIndex = 0
 		$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))
 		#$listView.Refresh()
@@ -587,9 +600,17 @@ function Logi($item)
 	$contextMenuStrip1.Items.Add("Kopiuj ca³y wiersz").add_Click(
 	{
 		$item=$ListView.SelectedItems.SubItems;
-		write-host ($item.Length)
-		write-host ($item | Select-Object -ExpandProperty Text)
-		($item | Select-Object -ExpandProperty Text) -join "`t" | Set-Clipboard
+		$out = ""
+		for($i=0; $i -lt $item.Length; $i++)
+		{
+			if(($i % $ListView.Columns.COUNT) -eq 0 -and $i -gt 0 )
+			{
+				$out += "`n"
+			}
+			$out += ($item[$i].Text + "`t")
+		}
+		#($item | Select-Object -ExpandProperty Text) -join "`t" | Set-Clipboard
+		$out | Set-Clipboard
 	})
 
 	$ListView.ContextMenuStrip = $contextMenuStrip1
