@@ -41,7 +41,7 @@ $ile_lini_czytac = 15
 # 2019.12.03 - 3,5h - 19:00-22:30 dodano wczytywanie wzorc闚 z osobnego pliku, poprawienie kolor闚 podczas sortowania, suma tygodni tylko podczas 豉dowania, testy z klinanym menu
 # 2020.02.16 - 3,5h
 
-$title = "Testy na Pass GUI wersja. 7G"
+$title = "Testy na Pass GUI, wersja 7H"
 
 #przechowuje dane pobrane z plik闚
 $Wynik = [ordered]@{}
@@ -342,7 +342,14 @@ $ListView.FullRowSelect = $true;
 
 
 $contextMenuStrip1 = New-Object System.Windows.Forms.ContextMenuStrip
-$contextMenuStrip1.Items.Add("Pliki").add_Click({Logi($ListView.SelectedItems.SubItems)})
+$contextMenuStrip1.Items.Add("Pliki *").add_Click(
+{
+	#write-host("Zaznaczone:")
+	#write-host($ListView.SelectedItems.SubItems.COUNT)
+	#write-host($ListView.SelectedItems.SubItems)
+
+	Logi($ListView.SelectedItems.SubItems)
+})
 $contextMenuStrip1.Items.Add("Kopiuj FP, FTT").add_Click(
 {
 	$item=$ListView.SelectedItems.SubItems;
@@ -367,7 +374,7 @@ $contextMenuStrip1.Items.Add("Kopiuj PY, Modu堯w Suma").add_Click(
 	($item[5].Text + "	" + $item[6].Text | Set-Clipboard)
 })
 
-$contextMenuStrip1.Items.Add("Kopiuj ca造 wiersz").add_Click(
+$contextMenuStrip1.Items.Add("Kopiuj ca造 wiersz *").add_Click(
 {
 	$item=$ListView.SelectedItems.SubItems;
 	$out = ""
@@ -375,7 +382,7 @@ $contextMenuStrip1.Items.Add("Kopiuj ca造 wiersz").add_Click(
 	{
 		if(($i % $ListView.Columns.COUNT) -eq 0 -and $i -gt 0 )
 		{
-			$out += "`n"
+			$out += "`r`n"
 		}
 		$out += ($item[$i].Text + "`t")
 	}
@@ -479,7 +486,11 @@ function Logi($item)
 	}
 	$fileContent = @{}
 
-	$Wynik[$item[0].Text][$item[2].Text][$item[1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
+	# $Wynik[$item[0].Text][$item[2].Text][$item[1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
+	for($i=0; $i -lt $item.COUNT; $i+=9)
+	{
+		$Wynik[$item[$i].Text][$item[$i+2].Text][$item[$i+1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
+	}
 
 	if($checkMe1.Checked){write-host ($fileContent | ConvertTo-JSON -Depth 2)}
 	
@@ -597,7 +608,7 @@ function Logi($item)
 	
 	$contextMenuStrip1 = New-Object System.Windows.Forms.ContextMenuStrip
 
-	$contextMenuStrip1.Items.Add("Kopiuj ca造 wiersz").add_Click(
+	$contextMenuStrip1.Items.Add("Kopiuj ca造 wiersz *").add_Click(
 	{
 		$item=$ListView.SelectedItems.SubItems;
 		$out = ""
@@ -605,7 +616,7 @@ function Logi($item)
 		{
 			if(($i % $ListView.Columns.COUNT) -eq 0 -and $i -gt 0 )
 			{
-				$out += "`n"
+				$out += "`r`n"
 			}
 			$out += ($item[$i].Text + "`t")
 		}
