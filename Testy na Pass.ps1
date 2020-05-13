@@ -5,10 +5,14 @@
 $debug = 0
 
 #przciski, przesuniêcie rzêdu
-$Right_Row_Button = 800
+$Right_Row_Button = 200
+$Right_Row_Label = 200
+$textBoxPadingRight = 170
+$Right_Row_PadingY = 50
 $wielkosc_czcionki_okna = 10
 $rozmiar_kolumn = 105
 $wysokosc_okna = 620
+$dlugosc_okna = 1100
 
 $plik_wzorcow = "wzorce_nazw_plikow.ini"
 
@@ -33,7 +37,7 @@ $ile_lini_czytac = 15
 # 2019.12.03 - 3,5h - 19:00-22:30 dodano wczytywanie wzorców z osobnego pliku, poprawienie kolorów podczas sortowania, suma tygodni tylko podczas ³adowania, testy z klinanym menu
 # 2020.02.16 - 3,5h
 
-$title = "Testy na Pass GUI, wersja 7H"
+$title = "Testy na Pass GUI, wersja 7H test resize"
 
 #przechowuje dane pobrane z plików
 $Wynik = [ordered]@{}
@@ -82,7 +86,7 @@ function Get-WeekNumber([datetime]$DateTime = (Get-Date))
 Add-Type -AssemblyName System.Windows.Forms
 $form = New-Object System.Windows.Forms.Form
 $form.Text=$title
-$form.Size=New-Object System.Drawing.Size(($Right_Row_Button+300), $wysokosc_okna)
+$form.Size=New-Object System.Drawing.Size($dlugosc_okna, $wysokosc_okna)
 $form.StartPosition='CenterScreen'
 #$form.topmost = $true
 
@@ -273,48 +277,58 @@ $form.Controls.Add($label1)
 $label2=New-Object System.Windows.Forms.label
 $label2.Text="Rok"
 $label2.AutoSize=$True
-$label2.Top="55"
-$label2.Left=($Right_Row_Button+10)
+$label2.Top=(35 + $Right_Row_PadingY)
+$label2.Left=($form.Size.Width - $Right_Row_Label)
 $label2.Anchor="Left,Top"
 $label2.Font = $MyFont
 $form.Controls.Add($label2)
+
+#3 linia
+$label3=New-Object System.Windows.Forms.label
+$label3.Text="DATA: " + (get-date -UFormat "%Y-%m-%d")
+$label3.AutoSize=$True
+$label3.Top=(245 + $Right_Row_PadingY)
+$label3.Left=($form.Size.Width - $Right_Row_Label)
+$label3.Anchor="Left,Top"
+$label3.Font = $MyFont
+$form.Controls.Add($label3)
 
 #4 linia
-$label2=New-Object System.Windows.Forms.label
-$label2.Text="Od tygodnia"
-$label2.AutoSize=$True
-$label2.Top="105"
-$label2.Left=$Right_Row_Button
-$label2.Anchor="Left,Top"
-$label2.Font = $MyFont
-$form.Controls.Add($label2)
+$label4=New-Object System.Windows.Forms.label
+$label4.Text="Od tygodnia"
+$label4.AutoSize=$True
+$label4.Top=(85 + $Right_Row_PadingY)
+$label4.Left=($form.Size.Width - $Right_Row_Label)
+$label4.Anchor="Left,Top"
+$label4.Font = $MyFont
+$form.Controls.Add($label4)
 
 #5 linia
-$label2=New-Object System.Windows.Forms.label
-$label2.Text="Do tygodnia"
-$label2.AutoSize=$True
-$label2.Top="155"
-$label2.Left=$Right_Row_Button
-$label2.Anchor="Left,Top"
-$label2.Font = $MyFont
-$form.Controls.Add($label2)
+$label5=New-Object System.Windows.Forms.label
+$label5.Text="Do tygodnia"
+$label5.AutoSize=$True
+$label5.Top=(135 + $Right_Row_PadingY)
+$label5.Left=($form.Size.Width - $Right_Row_Label)
+$label5.Anchor="Left,Top"
+$label5.Font = $MyFont
+$form.Controls.Add($label5)
 
 #6 linia
 $label6=New-Object System.Windows.Forms.label
 $label6.Text="£¹cznie folderów: 0"
 $label6.AutoSize=$True
-$label6.Top="205"
-$label6.Left=$Right_Row_Button
+$label6.Top=(205 + $Right_Row_PadingY)
+$label6.Left=($form.Size.Width - $Right_Row_Label)
 $label6.Anchor="Left,Top"
 $label6.Font = $MyFont
 $form.Controls.Add($label6)
 
 #7 linia
 $label7=New-Object System.Windows.Forms.label
-$label7.Text="Aktualny tydzieñ: " + (Get-WeekNumber) + " DATA: " + (get-date -UFormat "%Y-%m-%d")
+$label7.Text="Aktualny tydzieñ: " + (Get-WeekNumber)
 $label7.AutoSize=$True
-$label7.Top="225"
-$label7.Left=$Right_Row_Button
+$label7.Top=(225 + $Right_Row_PadingY)
+$label7.Left=($form.Size.Width - $Right_Row_Label)
 $label7.Anchor="Left,Top"
 $label7.Font = $MyFont
 $form.Controls.Add($label7)
@@ -329,12 +343,38 @@ $label8.Anchor="Left,Top"
 $label8.Font = $MyFont
 $form.Controls.Add($label8)
 
+$form.add_ResizeEnd({
+	$form.Controls.Remove($label2)
+	$form.Controls.Remove($label3)
+	$form.Controls.Remove($label4)
+	$form.Controls.Remove($label5)
+	$form.Controls.Remove($label6)
+	$form.Controls.Remove($label7)
+	$label2.Left=($form.Size.Width - $Right_Row_Label)
+	$label3.Left=($form.Size.Width - $Right_Row_Label)
+	$label4.Left=($form.Size.Width - $Right_Row_Label)
+	$label5.Left=($form.Size.Width - $Right_Row_Label)
+	$label6.Left=($form.Size.Width - $Right_Row_Label)
+	$label7.Left=($form.Size.Width - $Right_Row_Label)
+	$form.Controls.Add($label2)
+	$form.Controls.Add($label3)
+	$form.Controls.Add($label4)
+	$form.Controls.Add($label5)
+	$form.Controls.Add($label6)
+	$form.Controls.Add($label7)
+})
+
 #OKNO Z KOLUMNAMI
 $listView = New-Object System.Windows.Forms.ListView
 $ListView.Location = New-Object System.Drawing.Point(10, 80)
-$ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20),($wysokosc_okna - 130))
+$ListView.Size = New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Label - 30),($form.Size.Height - 130))
 $ListView.View = [System.Windows.Forms.View]::Details
 $ListView.FullRowSelect = $true;
+$form.add_ResizeEnd({
+	$form.Controls.Remove($ListView)
+	$ListView.Size = New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Label - 30),($form.Size.Height - 130))
+	$form.Controls.Add($ListView)
+})
 
 
 
@@ -526,16 +566,21 @@ function Logi($item)
 	Add-Type -AssemblyName System.Windows.Forms
 	$form = New-Object System.Windows.Forms.Form
 	$form.Text=$item[0].Text
-	$form.Size=New-Object System.Drawing.Size(($Right_Row_Button+300), $wysokosc_okna)
+	$form.Size=New-Object System.Drawing.Size($dlugosc_okna, $wysokosc_okna)
 	$form.StartPosition='CenterScreen'
 
 	#OKNO Z KOLUMNAMI
 	$listView = New-Object System.Windows.Forms.ListView
 	$ListView.Location = New-Object System.Drawing.Point(10, 15)
-	$ListView.Size = New-Object System.Drawing.Size(($Right_Row_Button - 20 + 250),($wysokosc_okna - 70))
+	$ListView.Size = New-Object System.Drawing.Size(($form.Size.Width - 50),($form.Size.Height - 70))
 	$ListView.View = [System.Windows.Forms.View]::Details
 	$ListView.FullRowSelect = $true;
 	$ListView.Font = $MyFont
+	$form.add_ResizeEnd({
+		$form.Controls.Remove($ListView)
+		$ListView.Size = New-Object System.Drawing.Size(($form.Size.Width - 50),($form.Size.Height - 70))
+		$form.Controls.Add($ListView)
+	})
 	$form.Controls.Add($ListView)
 
 	$MyTextAlign = [System.Windows.Forms.HorizontalAlignment]::Left;
@@ -776,22 +821,32 @@ $ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVc
 
 #CHECKBOX 0
 $checkMe0=New-Object System.Windows.Forms.CheckBox
-$checkMe0.Location=New-Object System.Drawing.Size(($Right_Row_Button+210),55)
+$checkMe0.Location=New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Button),(285 + $Right_Row_PadingY))
 $checkMe0.Size=New-Object System.Drawing.Size(100,30)
 $checkMe0.Text="Sumuj tygodnie"
 $checkMe0.TabIndex=1
 $checkMe0.Checked=$false
 $checkMe0.Font = $MyFont
+$form.add_ResizeEnd({
+	$form.Controls.Remove($checkMe0)
+	$checkMe0.Location = New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Button),(285 + $Right_Row_PadingY))
+	$form.Controls.Add($checkMe0)
+})
 $form.Controls.Add($checkMe0)
 
 #CHECKBOX 1
 $checkMe1=New-Object System.Windows.Forms.CheckBox
-$checkMe1.Location=New-Object System.Drawing.Size(($Right_Row_Button+210),25)
+$checkMe1.Location=New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Button),(325 + $Right_Row_PadingY))
 $checkMe1.Size=New-Object System.Drawing.Size(100,30)
 $checkMe1.Text="Debug"
 $checkMe1.TabIndex=1
 $checkMe1.Checked=$false
 $checkMe1.Font = $MyFont
+$form.add_ResizeEnd({
+	$form.Controls.Remove($checkMe1)
+	$checkMe1.Location=New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Button),(325 + $Right_Row_PadingY))
+	$form.Controls.Add($checkMe1)
+})
 $form.Controls.Add($checkMe1)
 
 #CHECKBOX 2
@@ -814,30 +869,43 @@ $checkMe3.Checked=$true
 $checkMe3.Font = $MyFont
 #$form.Controls.Add($checkMe3)
 
-$textBoxPadingRight = 110
-
 #TEXTBOX 1
 $textBox1 = New-Object System.Windows.Forms.TextBox
-$textBox1.Location = New-Object System.Drawing.Point(($Right_Row_Button+$textBoxPadingRight),55)
+$textBox1.Location = New-Object System.Drawing.Point(($form.Size.Width - $textBoxPadingRight),(55 + $Right_Row_PadingY))
 $textBox1.Size = New-Object System.Drawing.Size(40,30)
 $textBox1.Text=$testRok
 $textBox1.Font = $MyFont
+$form.add_ResizeEnd({
+	$form.Controls.Remove($textBox1)
+	$textBox1.Location=New-Object System.Drawing.Size(($form.Size.Width - $textBoxPadingRight),(55 + $Right_Row_PadingY))
+	$form.Controls.Add($textBox1)
+})
 $form.Controls.Add($textBox1)
 
 #TEXTBOX 2
 $textBox2 = New-Object System.Windows.Forms.TextBox
-$textBox2.Location = New-Object System.Drawing.Point(($Right_Row_Button+$textBoxPadingRight),105)
+$textBox2.Location = New-Object System.Drawing.Point(($form.Size.Width - $textBoxPadingRight),(105 + $Right_Row_PadingY))
 $textBox2.Size = New-Object System.Drawing.Size(40,30)
 $textBox2.Text=$od_t
 $textBox2.Font = $MyFont
+$form.add_ResizeEnd({
+	$form.Controls.Remove($textBox2)
+	$textBox2.Location=New-Object System.Drawing.Size(($form.Size.Width - $textBoxPadingRight),(105 + $Right_Row_PadingY))
+	$form.Controls.Add($textBox2)
+})
 $form.Controls.Add($textBox2)
 
 #TEXTBOX 3
 $textBox3 = New-Object System.Windows.Forms.TextBox
-$textBox3.Location = New-Object System.Drawing.Point(($Right_Row_Button+$textBoxPadingRight),155)
+$textBox3.Location = New-Object System.Drawing.Point(($form.Size.Width - $textBoxPadingRight),(155 + $Right_Row_PadingY))
 $textBox3.Size = New-Object System.Drawing.Size(40,30)
 $textBox3.Text=$do_t
 $textBox3.Font = $MyFont
+$form.add_ResizeEnd({
+	$form.Controls.Remove($textBox3)
+	$textBox3.Location=New-Object System.Drawing.Size(($form.Size.Width - $textBoxPadingRight),(155 + $Right_Row_PadingY))
+	$form.Controls.Add($textBox3)
+})
 $form.Controls.Add($textBox3)
 
 #TEXTBOX 4
