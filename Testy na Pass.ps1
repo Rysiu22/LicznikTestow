@@ -36,8 +36,9 @@ $ile_lini_czytac = 15
 # 2019.11.11 - 9h
 # 2019.12.03 - 3,5h - 19:00-22:30 dodano wczytywanie wzorców z osobnego pliku, poprawienie kolorów podczas sortowania, suma tygodni tylko podczas ³adowania, testy z klinanym menu
 # 2020.02.16 - 3,5h
+# 2020.02.21 - 4h
 
-$title = "Testy na Pass GUI, wersja 7H test resize"
+$title = "Testy na Pass GUI, wersja 7J"
 
 #przechowuje dane pobrane z plików
 $Wynik = [ordered]@{}
@@ -379,14 +380,6 @@ $form.add_ResizeEnd({
 
 
 $contextMenuStrip1 = New-Object System.Windows.Forms.ContextMenuStrip
-$contextMenuStrip1.Items.Add("Pliki *").add_Click(
-{
-	#write-host("Zaznaczone:")
-	#write-host($ListView.SelectedItems.SubItems.COUNT)
-	#write-host($ListView.SelectedItems.SubItems)
-
-	Logi($ListView.SelectedItems.SubItems)
-})
 $contextMenuStrip1.Items.Add("Kopiuj FP, FTT").add_Click(
 {
 	$item=$ListView.SelectedItems.SubItems;
@@ -410,7 +403,22 @@ $contextMenuStrip1.Items.Add("Kopiuj PY, Modu³ów Suma").add_Click(
 	#(($tmp["PY"]).ToString() + "	" + ($tmp["sum_moduly"]).ToString() | Set-Clipboard)
 	($item[5].Text + "	" + $item[6].Text | Set-Clipboard)
 })
+$contextMenuStrip1.Items.Add("Pliki *").add_Click(
+{
+	#write-host("Zaznaczone:")
+	#write-host($ListView.SelectedItems.SubItems.COUNT)
+	#write-host($ListView.SelectedItems.SubItems)
 
+	Logi($ListView.SelectedItems.SubItems)
+})
+$contextMenuStrip1.Items.Add("Pliki tylko ostatnie *").add_Click(
+{
+	#write-host("Zaznaczone:")
+	#write-host($ListView.SelectedItems.SubItems.COUNT)
+	#write-host($ListView.SelectedItems.SubItems)
+
+	Logi_last($ListView.SelectedItems.SubItems)
+})
 $contextMenuStrip1.Items.Add("Kopiuj ca³y wiersz *").add_Click(
 {
 	$item=$ListView.SelectedItems.SubItems;
@@ -548,10 +556,6 @@ function UstawoKolorWierszy($ListView)
 
 function Logi($item)
 {
-	if(! $item)
-	{
-		return
-	}
 	$fileContent = @{}
 
 	# $Wynik[$item[0].Text][$item[2].Text][$item[1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
@@ -561,7 +565,40 @@ function Logi($item)
 	}
 
 	if($checkMe1.Checked){write-host ($fileContent | ConvertTo-JSON -Depth 2)}
+
+    Logi_go($fileContent)
 	
+}
+
+function Logi_last($item)
+{
+	$fileContent = @{}
+
+	# $Wynik[$item[0].Text][$item[2].Text][$item[1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
+	for($i=0; $i -lt $item.COUNT; $i+=9) #$ListView.Columns.COUNT
+	{
+		Zliczaj2($Wynik[$item[$i].Text][$item[$i+2].Text][$item[$i+1].Text]["pliki"].GetEnumerator()) | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
+	}
+
+	if($checkMe1.Checked){write-host ($fileContent | ConvertTo-JSON -Depth 2)}
+	
+    Logi_go($fileContent)
+	
+}
+
+function Logi_go($fileContent)
+{
+
+	if(! $item)
+	{
+		return
+	}
+	$startLoad = Get-Date
+
+    #write-host $last
+    #Write-Host $item
+
+
 	#Tworzenie okna programu
 	Add-Type -AssemblyName System.Windows.Forms
 	$form = New-Object System.Windows.Forms.Form
@@ -734,10 +771,91 @@ function Logi($item)
 		GetStringFromUser "Info" "Obliczono czasy" $out;
 	})
 	
-	
+	$contextMenuStrip1.Items.Add("kopiuj czasy *").add_Click(
+	{
+		$item=$ListView.SelectedItems.SubItems;
+		$out = ""
+		$out_timespan = New-Object Collections.Generic.List[TimeSpan]
+		#write-host("count:")
+		#write-host($ListView.Columns.COUNT)
+		for($i=0; $i -lt ($item.Length - 1); $i+=$ListView.Columns.COUNT)
+		{
+			#write-host("czasy:")
+			#write-host($i)
+			#write-host($item[$i+6].Text)
+			#write-host($item[$i+7].Text)
+			$new_timespan = ( NEW-TIMESPAN –Start ([MyParse]::ParseDateTime($item[$i+6].Text)) –End ([MyParse]::ParseDateTime($item[$i+7].Text)) )
+			$out_timespan.Add($new_timespan)
+			$out += $new_timespan
+			$out += "`r`n"
+		}
+		#$out += "Iloœæ testów: " + ($item.Length / $ListView.Columns.COUNT).ToString() + ". "
+		#$out += "Suma czasu: $out_timespan"
+		#$out_timespan | Measure TotalSecs -Average -Sum -MAx -Min|ft *
+		$out += "`r`nMax: "
+		$out += ($out_timespan | Measure-Object -Maximum ).Maximum
+		
+		$out += "`r`nMin: "
+		$out += ($out_timespan | Measure-Object -Minimum ).Minimum
+		
+		#write-host( [TimeSpan][Int](($out_timespan | Measure-Object -Average -Property Ticks ).Average/100 ) )
+		#write-host( $out_timespan | Measure TotalSecs -Average -Sum -MAx -Min )
+		
+		
+		#$out += "Avg: " + ($out_timespan / $ListView.Columns.COUNT).toString() +"`r`n"
+		#($item | Select-Object -ExpandProperty Text) -join "`t" | Set-Clipboard
+		$out | Set-Clipboard
+		#GetStringFromUser "Info" "Obliczono czasy" $out;
+	})
+
+
+	$contextMenuStrip1.Items.Add("kopiuj czasy bez : *").add_Click(
+	{
+		$item=$ListView.SelectedItems.SubItems;
+		$out = ""
+		$out_timespan = New-Object Collections.Generic.List[TimeSpan]
+		#write-host("count:")
+		#write-host($ListView.Columns.COUNT)
+		for($i=0; $i -lt ($item.Length - 1); $i+=$ListView.Columns.COUNT)
+		{
+			#write-host("czasy:")
+			#write-host($i)
+			#write-host($item[$i+6].Text)
+			#write-host($item[$i+7].Text)
+			$new_timespan = ( NEW-TIMESPAN –Start ([MyParse]::ParseDateTime($item[$i+6].Text)) –End ([MyParse]::ParseDateTime($item[$i+7].Text)) )
+			$out_timespan.Add($new_timespan)
+			$out += ($new_timespan -replace ':','')
+			$out += "`r`n"
+		}
+		#$out += "Iloœæ testów: " + ($item.Length / $ListView.Columns.COUNT).ToString() + ". "
+		#$out += "Suma czasu: $out_timespan"
+		#$out_timespan | Measure TotalSecs -Average -Sum -MAx -Min|ft *
+
+		$out_tmp = "Max: `t"
+		$out_tmp += ($out_timespan | Measure-Object -Maximum ).Maximum
+		
+		$out_tmp += "`r`nMin: `t"
+		$out_tmp += ($out_timespan | Measure-Object -Minimum ).Minimum
+
+		#$out_tmp += "`r`nSuma czasu: `t$out_timespan"
+		
+		$out_tmp += "`r`nMediana: `t"
+		$out_tmp += ("=MEDIANA(A4:A" + (4 + $out_timespan.COUNT).ToString() + ")`r`n" )
+		
+		#write-host( [TimeSpan][Int](($out_timespan | Measure-Object -Average -Property Ticks ).Average/100 ) )
+		#write-host( $out_timespan | Measure TotalSecs -Average -Sum -MAx -Min )
+		
+		
+		#$out += "Avg: " + ($out_timespan / $ListView.Columns.COUNT).toString() +"`r`n"
+		#($item | Select-Object -ExpandProperty Text) -join "`t" | Set-Clipboard
+		($out_tmp + $out) | Set-Clipboard
+		#GetStringFromUser "Info" "Obliczono czasy" $out;
+	})
 
 	$ListView.ContextMenuStrip = $contextMenuStrip1
-	
+
+	write-host "Koniec pliki", (NEW-TIMESPAN –Start $startLoad –End (Get-Date))
+
 	$form.ShowDialog()
 }
 
@@ -1327,6 +1445,7 @@ function GetList()
 			}
 			
 			$lista_last_pass = @($lista_last_test | WHERE-OBJECT {$lista_pass.Contains($_)} )
+			#write-host ($lista_last_test | ConvertTo-JSON -Depth 4 | Out-String)
 			if($checkMe1.Checked){write-host "Last Pass:",($lista_last_pass.Name | Out-String)}
 
 			if($checkMe1.Checked){write-host "Pass:",($lista_pass.Name | Out-String)}
@@ -1669,7 +1788,7 @@ function Dzialaj()
 	
 	foreach($path in (Get-ChildItem $sciezka))
 	{
-		write-host $path,$path.LastWriteTime
+		#write-host $path,$path.LastWriteTime
 		if((Get-Item $path.FULLNAME) -is [System.IO.DirectoryInfo])
 		{
 			#wype³nanie tabeli aktualnym statusem pracy
