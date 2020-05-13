@@ -1,13 +1,5 @@
 #zlicza udane testy z danego tygodznia
 
-
-function Get-WeekNumber([datetime]$DateTime = (Get-Date)) 
-{
-	$ci = [System.Globalization.CultureInfo]::CurrentCulture
-	($ci.Calendar.GetWeekOfYear($DateTime,$ci.DateTimeFormat.CalendarWeekRule,$ci.DateTimeFormat.FirstDayOfWeek)).ToString()
-}
-
-
 #dane do edycji:
 #czy wyœwietlaæ dodatkowe informacje, bêdzie dzia³aæ wolniej
 $debug = 0
@@ -80,6 +72,11 @@ ELSE
 
 #POBIERA AKTUALN¥ DATE
 $dzien=get-date -UFormat "%Y-%m-%d"
+function Get-WeekNumber([datetime]$DateTime = (Get-Date)) 
+{
+	$ci = [System.Globalization.CultureInfo]::CurrentCulture
+	($ci.Calendar.GetWeekOfYear($DateTime,$ci.DateTimeFormat.CalendarWeekRule,$ci.DateTimeFormat.FirstDayOfWeek)).ToString()
+}
 
 #Tworzenie okna programu
 Add-Type -AssemblyName System.Windows.Forms
@@ -460,6 +457,37 @@ Add-Type -TypeDefinition $comparerClassString -ReferencedAssemblies ('System.Win
 # Add the event to the ListView ColumnClick event
 $ListView.add_ColumnClick({ $listView.ListViewItemSorter = New-Object ListViewItemComparer($_.Column); UstawoKolorWierszy($ListView) })
 
+$ff = @"
+    using System;
+    using System.IO;
+	using System.Text.RegularExpressions;
+    
+	public class MyParse
+    {
+        public static DateTime ParseDateTime(string value)
+        {
+            //'2017-02-27c14:21.36 [3571046496,24]'
+            // date 8 dig, time 6 dig, 10+2 dig (odejmuj¹c '2082841200,00' uzyskamy poprawn¹ iloœæ sekund)
+
+            string[] numbers = Regex.Split(value, @"\D+");
+
+            DateTime date = DateTime.MinValue;
+            if (numbers.Length >= 6)
+            {
+                date = new DateTime(int.Parse(numbers[0]), int.Parse(numbers[1]), int.Parse(numbers[2]), int.Parse(numbers[3]), int.Parse(numbers[4]), int.Parse(numbers[5]));
+            }
+            else
+            {
+                throw new FormatException();
+            }
+
+            return date;
+        }
+	}
+"@
+
+Add-Type -TypeDefinition $ff -Language CSharp
+
 
 function UstawoKolorWierszy($ListView)
 {
@@ -487,7 +515,7 @@ function Logi($item)
 	$fileContent = @{}
 
 	# $Wynik[$item[0].Text][$item[2].Text][$item[1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
-	for($i=0; $i -lt $item.COUNT; $i+=9)
+	for($i=0; $i -lt $item.COUNT; $i+=9) #$ListView.Columns.COUNT
 	{
 		$Wynik[$item[$i].Text][$item[$i+2].Text][$item[$i+1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
 	}
@@ -623,6 +651,45 @@ function Logi($item)
 		#($item | Select-Object -ExpandProperty Text) -join "`t" | Set-Clipboard
 		$out | Set-Clipboard
 	})
+
+	$contextMenuStrip1.Items.Add("oblicz czasy *").add_Click(
+	{
+		$item=$ListView.SelectedItems.SubItems;
+		$out = ""
+		$out_timespan = New-Object Collections.Generic.List[TimeSpan]
+		#write-host("count:")
+		#write-host($ListView.Columns.COUNT)
+		for($i=0; $i -lt ($item.Length - 1); $i+=$ListView.Columns.COUNT)
+		{
+			#write-host("czasy:")
+			#write-host($i)
+			#write-host($item[$i+6].Text)
+			#write-host($item[$i+7].Text)
+			$new_timespan = ( NEW-TIMESPAN –Start ([MyParse]::ParseDateTime($item[$i+6].Text)) –End ([MyParse]::ParseDateTime($item[$i+7].Text)) )
+			$out_timespan.Add($new_timespan)
+			#$out += $new_timespan
+			#$out += "`r`n"
+		}
+		#$out += "Iloœæ testów: " + ($item.Length / $ListView.Columns.COUNT).ToString() + ". "
+		#$out += "Suma czasu: $out_timespan"
+		#$out_timespan | Measure TotalSecs -Average -Sum -MAx -Min|ft *
+		$out += "Max: "
+		$out += ($out_timespan | Measure-Object -Maximum ).Maximum
+		
+		$out += "Min: "
+		$out += ($out_timespan | Measure-Object -Minimum ).Minimum
+		
+		#write-host( [TimeSpan][Int](($out_timespan | Measure-Object -Average -Property Ticks ).Average/100 ) )
+		#write-host( $out_timespan | Measure TotalSecs -Average -Sum -MAx -Min )
+		
+		
+		#$out += "Avg: " + ($out_timespan / $ListView.Columns.COUNT).toString() +"`r`n"
+		#($item | Select-Object -ExpandProperty Text) -join "`t" | Set-Clipboard
+		#$out | Set-Clipboard
+		GetStringFromUser "Info" "Obliczono czasy" $out;
+	})
+	
+	
 
 	$ListView.ContextMenuStrip = $contextMenuStrip1
 	
@@ -1525,6 +1592,7 @@ function zjson()
 function Dzialaj()
 {
 	write-host "Start"
+	$startLoad = Get-Date
 	zapis_konfiguracji
 	
 	#zerowanie zmiennej
@@ -1550,9 +1618,7 @@ function Dzialaj()
 	}
 	
 	Odswiez
-
-	$date = get-date
-	write-host "Koniec", $date
+	write-host "Koniec", (NEW-TIMESPAN –Start $startLoad –End (Get-Date))
 }
 
 function zapis_konfiguracji()
