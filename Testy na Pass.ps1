@@ -344,25 +344,13 @@ $label8.Anchor="Left,Top"
 $label8.Font = $MyFont
 $form.Controls.Add($label8)
 
-$form.add_ResizeEnd({
-	$form.Controls.Remove($label2)
-	$form.Controls.Remove($label3)
-	$form.Controls.Remove($label4)
-	$form.Controls.Remove($label5)
-	$form.Controls.Remove($label6)
-	$form.Controls.Remove($label7)
+$form.add_Resize({
 	$label2.Left=($form.Size.Width - $Right_Row_Label)
 	$label3.Left=($form.Size.Width - $Right_Row_Label)
 	$label4.Left=($form.Size.Width - $Right_Row_Label)
 	$label5.Left=($form.Size.Width - $Right_Row_Label)
 	$label6.Left=($form.Size.Width - $Right_Row_Label)
 	$label7.Left=($form.Size.Width - $Right_Row_Label)
-	$form.Controls.Add($label2)
-	$form.Controls.Add($label3)
-	$form.Controls.Add($label4)
-	$form.Controls.Add($label5)
-	$form.Controls.Add($label6)
-	$form.Controls.Add($label7)
 })
 
 #OKNO Z KOLUMNAMI
@@ -371,10 +359,8 @@ $ListView.Location = New-Object System.Drawing.Point(10, 80)
 $ListView.Size = New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Label - 30),($form.Size.Height - 130))
 $ListView.View = [System.Windows.Forms.View]::Details
 $ListView.FullRowSelect = $true;
-$form.add_ResizeEnd({
-	$form.Controls.Remove($ListView)
+$form.add_Resize({
 	$ListView.Size = New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Label - 30),($form.Size.Height - 130))
-	$form.Controls.Add($ListView)
 })
 
 
@@ -613,10 +599,8 @@ function Logi_go($fileContent)
 	$ListView.View = [System.Windows.Forms.View]::Details
 	$ListView.FullRowSelect = $true;
 	$ListView.Font = $MyFont
-	$form.add_ResizeEnd({
-		$form.Controls.Remove($ListView)
+	$form.add_Resize({
 		$ListView.Size = New-Object System.Drawing.Size(($form.Size.Width - 50),($form.Size.Height - 70))
-		$form.Controls.Add($ListView)
 	})
 	$form.Controls.Add($ListView)
 
@@ -945,10 +929,8 @@ $checkMe0.Text="Sumuj tygodnie"
 $checkMe0.TabIndex=1
 $checkMe0.Checked=$false
 $checkMe0.Font = $MyFont
-$form.add_ResizeEnd({
-	$form.Controls.Remove($checkMe0)
+$form.add_Resize({
 	$checkMe0.Location = New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Button),(285 + $Right_Row_PadingY))
-	$form.Controls.Add($checkMe0)
 })
 $form.Controls.Add($checkMe0)
 
@@ -960,10 +942,8 @@ $checkMe1.Text="Debug"
 $checkMe1.TabIndex=1
 $checkMe1.Checked=$false
 $checkMe1.Font = $MyFont
-$form.add_ResizeEnd({
-	$form.Controls.Remove($checkMe1)
+$form.add_Resize({
 	$checkMe1.Location=New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Button),(325 + $Right_Row_PadingY))
-	$form.Controls.Add($checkMe1)
 })
 $form.Controls.Add($checkMe1)
 
@@ -993,10 +973,8 @@ $textBox1.Location = New-Object System.Drawing.Point(($form.Size.Width - $textBo
 $textBox1.Size = New-Object System.Drawing.Size(40,30)
 $textBox1.Text=$testRok
 $textBox1.Font = $MyFont
-$form.add_ResizeEnd({
-	$form.Controls.Remove($textBox1)
+$form.add_Resize({
 	$textBox1.Location=New-Object System.Drawing.Size(($form.Size.Width - $textBoxPadingRight),(55 + $Right_Row_PadingY))
-	$form.Controls.Add($textBox1)
 })
 $form.Controls.Add($textBox1)
 
@@ -1006,10 +984,8 @@ $textBox2.Location = New-Object System.Drawing.Point(($form.Size.Width - $textBo
 $textBox2.Size = New-Object System.Drawing.Size(40,30)
 $textBox2.Text=$od_t
 $textBox2.Font = $MyFont
-$form.add_ResizeEnd({
-	$form.Controls.Remove($textBox2)
+$form.add_Resize({
 	$textBox2.Location=New-Object System.Drawing.Size(($form.Size.Width - $textBoxPadingRight),(105 + $Right_Row_PadingY))
-	$form.Controls.Add($textBox2)
 })
 $form.Controls.Add($textBox2)
 
@@ -1019,10 +995,8 @@ $textBox3.Location = New-Object System.Drawing.Point(($form.Size.Width - $textBo
 $textBox3.Size = New-Object System.Drawing.Size(40,30)
 $textBox3.Text=$do_t
 $textBox3.Font = $MyFont
-$form.add_ResizeEnd({
-	$form.Controls.Remove($textBox3)
+$form.add_Resize({
 	$textBox3.Location=New-Object System.Drawing.Size(($form.Size.Width - $textBoxPadingRight),(155 + $Right_Row_PadingY))
-	$form.Controls.Add($textBox3)
 })
 $form.Controls.Add($textBox3)
 
