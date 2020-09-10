@@ -8,11 +8,11 @@ $debug = 0
 $Right_Row_Button = 200
 $Right_Row_Label = 200
 $textBoxPadingRight = 170
-$Right_Row_PadingY = 50
+$Right_Row_PadingY = (50 + 25)
 $wielkosc_czcionki_okna = 10
 $rozmiar_kolumn = 105
 $wysokosc_okna = 620
-$dlugosc_okna = 1100
+$dlugosc_okna = 1150
 
 $plik_wzorcow = "wzorce_nazw_plikow.ini"
 
@@ -37,25 +37,28 @@ $ile_lini_czytac = 15
 # 2019.12.03 - 3,5h - 19:00-22:30 dodano wczytywanie wzorców z osobnego pliku, poprawienie kolorów podczas sortowania, suma tygodni tylko podczas ³adowania, testy z klinanym menu
 # 2020.02.16 - 3,5h
 # 2020.02.21 - 4h
+# 2020.09.10 - 5h update do 7K
 
-$title = "Testy na Pass GUI, wersja 7J"
+$title = "Testy na Pass GUI, wersja 7K"
 
 #przechowuje dane pobrane z plików
 $Wynik = [ordered]@{}
 
-$regPath="HKCU:\SOFTWARE\Rysiu22\TnP7F"
+$regPath="HKCU:\SOFTWARE\Rysiu22\TnP7K"
 $name="path"
 $regYear="rok"
 $regPastWeek="od_tygodnia"
 $regToWeek="do_tygodnia"
 $regMyRegxFile="filter_plikow"
+$regMyRegxDirectory="filter_katalogu"
 
 #folder z logami
 $sciezka=[System.IO.Path]::GetDirectoryName($script:MyInvocation.MyCommand.Path) #aktualna œcie¿ka
-$testRok="2019"
+$testRok=get-date -UFormat "%Y"
 $od_t="1"
 $do_t="52"
 $myRegxFile=".*"
+$myRegxDirectory=".*"
 
 #wczytanie okienek
 [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms") | Out-Null
@@ -68,6 +71,7 @@ IF( (Test-Path $regPath))
 	$od_t=(Get-Item -Path $regPath).GetValue($regPastWeek)
 	$do_t=(Get-Item -Path $regPath).GetValue($regToWeek)
 	$myRegxFile=(Get-Item -Path $regPath).GetValue($regMyRegxFile)
+	$myRegxDirectory=(Get-Item -Path $regPath).GetValue($regMyRegxDirectory)
 	
 }
 ELSE
@@ -163,27 +167,58 @@ ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
 }
 
 $DropDownGUsers3Dict=@{
-	'1 Wszystko: .*' = {
+	'01 Foldery wszystkie: .*' = {
+		$script:myRegxDirectory=".*"; 
+		$label9.Text="wzorzec: ",$myRegxDirectory; 
+		$label9.Refresh();
+		#$Wynik = ObliczPonownie $Wynik; Odswiez;
+		};
+	'02 Folder Wlasny' = {
+		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxDirectory; 
+		if($tmp){$script:myRegxDirectory=$tmp}; 
+		$label9.Text="wzorzec: ",$myRegxDirectory; 
+		$label9.Refresh();
+		#$Wynik = ObliczPonownie $Wynik; Odswiez;
+		};
+	'03 Foldery kart kontroli' = {
+		$script:myRegxDirectory="ISA[0-9]+(06|23)-[0-9]+"; 
+		$label9.Text="wzorzec: ",$myRegxDirectory; 
+		$label9.Refresh();
+		#$Wynik = ObliczPonownie $Wynik; Odswiez;
+		};
+	'22 Wszystko: .*' = {
 		$script:myRegxFile=".*"; 
 		$label8.Text="wzorzec: ",$myRegxFile; 
 		$label8.Refresh();
 		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
-	"2 Karta: $wzorzec_karty" = {
+	'23 W³asny' = {
+		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxFile; 
+		if($tmp){$script:myRegxFile=$tmp}; 
+		$label8.Text="wzorzec: ",$myRegxFile; 
+		$label8.Refresh();
+		$Wynik = ObliczPonownie $Wynik; Odswiez;
+		};
+	"24 Karta: $wzorzec_karty" = {
 		$script:myRegxFile=$wzorzec_karty;
 		$label8.Text="wzorzec: ",$myRegxFile;
 		$label8.Refresh();
 		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
-	"3 Wzmacniacz: $wzorzec_wzmacniacza" = {
+	"25 Wzmacniacz: $wzorzec_wzmacniacza" = {
 		$script:myRegxFile=$wzorzec_wzmacniacza;
 		$label8.Text="wzorzec: ",$myRegxFile; 
 		$label8.Refresh();
 		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
-	'4 W³asny' = {
-		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxFile; 
-		if($tmp){$script:myRegxFile=$tmp}; 
+	"26 karty ISA 06 i 23 rok 2020" = {
+		$script:myRegxFile="ISA[0-9]+(06|23)-[0-9]+_B20W[0-9]+S[0-9]+_[0-9]+\.txt";
+		$label8.Text="wzorzec: ",$myRegxFile; 
+		$label8.Refresh();
+		$Wynik = ObliczPonownie $Wynik; Odswiez;
+		};
+	"27 karty ISA 06 i 23 rok:2020 tylko 3 testy" = {
+		$script:myRegxFile="ISA[0-9]+(06|23)-[0-9]+_B20W[0-9]+S[0-9]+_[0-2]+\.txt";
 		$label8.Text="wzorzec: ",$myRegxFile; 
 		$label8.Refresh();
 		$Wynik = ObliczPonownie $Wynik; Odswiez;
@@ -220,7 +255,7 @@ ELSE
 ForEach ($GroupUserKey in ($DropDownGUsers3Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers2Dict[$GroupUserKey]
 	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
-	$GroupValue.Text = $GroupUserKey.Substring(2)
+	$GroupValue.Text = $GroupUserKey.Substring(3)
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
 	$UserGMenu3.DropDownItems.Add($GroupValue) | Out-Null
@@ -334,15 +369,25 @@ $label7.Anchor="Left,Top"
 $label7.Font = $MyFont
 $form.Controls.Add($label7)
 
-#7 linia
+#8 linia
 $label8=New-Object System.Windows.Forms.label
-$label8.Text="wzorzec: ",$myRegxFile
+$label8.Text="wzorzec pliku: ",$myRegxFile
 $label8.AutoSize=$True
 $label8.Top="55"
 $label8.Left=10
 $label8.Anchor="Left,Top"
 $label8.Font = $MyFont
 $form.Controls.Add($label8)
+
+#9 linia
+$label9=New-Object System.Windows.Forms.label
+$label9.Text="wzorzec folderu: ",$myRegxDirectory
+$label9.AutoSize=$True
+$label9.Top=(55 + 25)
+$label9.Left=10
+$label9.Anchor="Left,Top"
+$label9.Font = $MyFont
+$form.Controls.Add($label9)
 
 $form.add_Resize({
 	$label2.Left=($form.Size.Width - $Right_Row_Label)
@@ -355,12 +400,12 @@ $form.add_Resize({
 
 #OKNO Z KOLUMNAMI
 $listView = New-Object System.Windows.Forms.ListView
-$ListView.Location = New-Object System.Drawing.Point(10, 80)
-$ListView.Size = New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Label - 30),($form.Size.Height - 130))
+$ListView.Location = New-Object System.Drawing.Point(10, (35 + $Right_Row_PadingY))
+$ListView.Size = New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Label - 30),($form.Size.Height - 100 - $Right_Row_PadingY))
 $ListView.View = [System.Windows.Forms.View]::Details
 $ListView.FullRowSelect = $true;
 $form.add_Resize({
-	$ListView.Size = New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Label - 30),($form.Size.Height - 130))
+	$ListView.Size = New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Label - 30),($form.Size.Height - 100 - $Right_Row_PadingY))
 })
 
 
@@ -409,6 +454,8 @@ $contextMenuStrip1.Items.Add("Kopiuj ca³y wiersz *").add_Click(
 {
 	$item=$ListView.SelectedItems.SubItems;
 	$out = ""
+	$ListView.Columns | ForEach-Object { $out += ($_.Text + "`t") } # Nazwy kolumn
+	$out += "`r`n"
 	for($i=0; $i -lt $item.Length; $i++)
 	{
 		if(($i % $ListView.Columns.COUNT) -eq 0 -and $i -gt 0 )
@@ -545,6 +592,7 @@ function Logi($item)
 	$fileContent = @{}
 
 	# $Wynik[$item[0].Text][$item[2].Text][$item[1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
+
 	for($i=0; $i -lt $item.COUNT; $i+=9) #$ListView.Columns.COUNT
 	{
 		$Wynik[$item[$i].Text][$item[$i+2].Text][$item[$i+1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
@@ -559,7 +607,7 @@ function Logi($item)
 function Logi_last($item)
 {
 	$fileContent = @{}
-
+	# write-host $item.COUNT
 	# $Wynik[$item[0].Text][$item[2].Text][$item[1].Text]["pliki"].GetEnumerator() | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object { $fileContent.Add($_.Name, $_.Value) }
 	for($i=0; $i -lt $item.COUNT; $i+=9) #$ListView.Columns.COUNT
 	{
@@ -706,6 +754,8 @@ function Logi_go($fileContent)
 	{
 		$item=$ListView.SelectedItems.SubItems;
 		$out = ""
+		$ListView.Columns | ForEach-Object { $out += ($_.Text + "`t") } # Nazwy kolumn
+		$out += "`r`n"
 		for($i=0; $i -lt $item.Length; $i++)
 		{
 			if(($i % $ListView.Columns.COUNT) -eq 0 -and $i -gt 0 )
@@ -889,15 +939,30 @@ $LVcol7.Width = $rozmiar_kolumn
 $LVcol8 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol8.TextAlign = $MyTextAlign
 $LVcol8.Text = "Pass Suma"
-$LVcol8.Width = $rozmiar_kolumn
+$LVcol8.Width = 10 # $rozmiar_kolumn
 
 $LVcol9 = New-Object System.Windows.Forms.ColumnHeader
 $LVcol9.TextAlign = $MyTextAlign
 $LVcol9.Text = "Testów Suma"
-$LVcol9.Width = $rozmiar_kolumn
+$LVcol9.Width = 10 # $rozmiar_kolumn
+
+$LVcol10 = New-Object System.Windows.Forms.ColumnHeader
+$LVcol10.TextAlign = $MyTextAlign
+$LVcol10.Text = "FP %"
+#$LVcol10.Width = $rozmiar_kolumn
+
+$LVcol11 = New-Object System.Windows.Forms.ColumnHeader
+$LVcol11.TextAlign = $MyTextAlign
+$LVcol11.Text = "PY %"
+#$LVcol11.Width = $rozmiar_kolumn
+
+$LVcol12 = New-Object System.Windows.Forms.ColumnHeader
+$LVcol12.TextAlign = $MyTextAlign
+$LVcol12.Text = "T/M - testy/modu³y"
+#$LVcol12.Width = $rozmiar_kolumn
 
 
-$ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVcol2, $LVcol3, $LVcol4, $LVcol5, $LVcol6, $LVcol7, $LVcol8, $LVcol9)))
+$ListView.Columns.AddRange([System.Windows.Forms.ColumnHeader[]](@($LVcol1, $LVcol2, $LVcol3, $LVcol4, $LVcol5, $LVcol6, $LVcol7, $LVcol8, $LVcol9, $LVcol10, $LVcol11, $LVcol12)))
 
 #dzia³a dobrze
 #$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@("ISA", "52", "2019", "0","1", "6", "7", "8")), -1)
@@ -945,7 +1010,7 @@ $checkMe1.Font = $MyFont
 $form.add_Resize({
 	$checkMe1.Location=New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Button),(325 + $Right_Row_PadingY))
 })
-$form.Controls.Add($checkMe1)
+#$form.Controls.Add($checkMe1)
 
 #CHECKBOX 2
 $checkMe2=New-Object System.Windows.Forms.CheckBox
@@ -966,6 +1031,20 @@ $checkMe3.TabIndex=1
 $checkMe3.Checked=$true
 $checkMe3.Font = $MyFont
 #$form.Controls.Add($checkMe3)
+
+#CHECKBOX 4
+$checkMe4=New-Object System.Windows.Forms.CheckBox
+$checkMe4.Location=New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Button),(325 + $Right_Row_PadingY))
+$checkMe4.Size=New-Object System.Drawing.Size(100,30)
+$checkMe4.Text="Postêp"
+$checkMe4.TabIndex=1
+$checkMe4.Checked=$true
+$checkMe4.Font = $MyFont
+$form.add_Resize({
+	$checkMe4.Location=New-Object System.Drawing.Size(($form.Size.Width - $Right_Row_Button),(325 + $Right_Row_PadingY))
+})
+$form.Controls.Add($checkMe4)
+
 
 #TEXTBOX 1
 $textBox1 = New-Object System.Windows.Forms.TextBox
@@ -1212,7 +1291,7 @@ function LoadData()
 			else
 			{
 				#write-host "Uwaga!!! Wykryto b³¹d spójnoœci testów. znalezione_testy: ",$znalezione_testy
-				write-host "Uwaga!!! Wykryto nie wyœwietlane testy"
+				write-host "Uwaga!!! Wykryto nie wyœwietlane testy", "rok:", $year, "tydzien", $week
 				if($checkMe1.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
 			}
 			
@@ -1244,6 +1323,18 @@ function GetList()
 	#zmienna z danymi
 	$Dict = @{}
 	$Result = @{}
+	
+	#Progress parameter
+	$Progress = @{
+		Activity = 'Czytanie plikow:'
+		CurrentOperation = "$sciezka1"
+		Status = 'Wczytywanie'
+		PercentComplete = 0
+	}
+
+	if($checkMe4.Checked){Write-Progress @Progress}
+	$i_Progress = 0
+	$i_next = 0
 
 	#pobranie posortowanych plików
 	$pliki = (Get-ChildItem $sciezka1 *.TXT) # | sort LastWriteTime
@@ -1251,6 +1342,16 @@ function GetList()
 	#wype³nianie zmiennej danymi na temat logów {rok:{tydzien: [dane] }
 	foreach($plik in $pliki)
 	{
+		$i_Progress++
+		
+		if( $i_Progress -ge $i_next -and $checkMe4.Checked)
+		{
+			$i_next += [int]($pliki.Count * 0.01)
+			$progress.PercentComplete = [int]($i_Progress / $pliki.Count *100)
+			$progress.Status = ('Szukanie plikow: ' + $progress.PercentComplete.ToString() + '%')
+			Write-Progress @Progress
+		}
+
 		$rok = (get-date $plik.LastWriteTime -UFormat %Y)
 		$plik_tydzien = (Get-WeekNumber (get-date $plik.LastWriteTime -UFormat "%Y-%m-%d"))
 		#if($debug){write-host $plik, (get-date $plik.LastWriteTime -UFormat "%Y.%V")}
@@ -1328,14 +1429,30 @@ function GetList()
 		write-host ""
 	}
 
+	$progress.Status = 'Wczytywanie'
+	$progress.PercentComplete = 0
+	Write-Progress @Progress
 		
 	#Przetworzenie zebranych danych
-	foreach($year in ($Dict.keys)) # | Sort-Object {[double]$_}))
+	foreach($year in ($Dict.keys | Sort-Object {[double]$_}))
 	{	
+		$i_Progress = 0
+		$i_next = 0
+		
 		if($checkMe1.Checked){write-host "key{$year : ... } count value:", $Dict[$year].Length}
 		
 		foreach($week in ($Dict[$year].keys)) # | Sort-Object {[double]$_}))
 		{
+			$i_Progress++
+			
+			if( $i_Progress -ge $i_next -and $checkMe4.Checked)
+			{
+				$i_next += [int]($Dict[$year].Count * 0.01)
+				$progress.PercentComplete = [int]($i_Progress / $Dict[$year].Count *100)
+				$progress.Status = ('Rok ' + $year + '. Przetwarzanie danych: ' + $progress.PercentComplete.ToString() + '%')
+				Write-Progress @Progress
+			}
+
 			if($true)
 			{
 			#otwarcie pliku i odczyt danych
@@ -1351,7 +1468,10 @@ function GetList()
 			
 			#$Dict[$year].$week | ForEach-Object {$fileContent.Add($_.Name, (GET-CONTENT $_.FULLNAME -Head 10 | ForEach-Object{([Regex]::Escape($_) | Select-String -Pattern $filePatternRegxKeyValue) } | ConvertFrom-StringData))}
 			
-			$Dict[$year].$week | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object {$fileContent.Add($_.Name, (GET-CONTENT $_.FULLNAME -Head $ile_lini_czytac | ForEach-Object{([Regex]::Escape($_) | Select-String -Pattern $filePatternRegxKeyValue) } | ConvertFrom-StringData))}
+			#skip empty file
+			$Dict[$year].$week | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object {if($checkMe4.Checked){$progress.CurrentOperation = "Odczyt: " + $_.Name; Write-Progress @Progress}; $fileContent.Add($_.Name, (GET-CONTENT $_.FULLNAME -Head $ile_lini_czytac | ? {$_.trim() -ne "" } | ForEach-Object{([Regex]::Escape($_) | Select-String -Pattern $filePatternRegxKeyValue) } | ConvertFrom-StringData))}
+			#wysypuje siê na pustych plikach
+			#$Dict[$year].$week | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxFile } | ForEach-Object {$progress.CurrentOperation = "Odczyt: " + $_.Name; Write-Progress @Progress; $fileContent.Add($_.Name, (GET-CONTENT $_.FULLNAME -Head $ile_lini_czytac | ForEach-Object{([Regex]::Escape($_) | Select-String -Pattern $filePatternRegxKeyValue) } | ConvertFrom-StringData))}
 
 			if($checkMe1.Checked){write-host "-- N:",($Dict[$year].$week.Name | Out-String)}
 			
@@ -1383,7 +1503,13 @@ function GetList()
 			#Wow dzia³a
 			FOREACH ($fc in $fileContent.GetEnumerator())
 			{
-				#write-host ($fc.Value | Out-String) 
+				#write-host ($fc.Value | Out-String)
+				if($checkMe4.Checked)
+				{
+					$progress.CurrentOperation = "Przetwarzanie: " + $fc.Name
+					Write-Progress @Progress
+				}
+
 				foreach($ff in $fc.Value)
 				{
 					#write-host ($ff.keys )
@@ -1496,7 +1622,7 @@ function GetList()
 			else
 			{
 				#write-host "Uwaga!!! Wykryto b³¹d spójnoœci testów. znalezione_testy: ",$znalezione_testy
-				write-host "Uwaga!!! Wykryto nie wyœwietlane testy"
+				write-host "Uwaga!!! Wykryto nie wyœwietlane testy", "rok:", $year, "tydzien", $week
 				if($checkMe1.Checked){write-host @($Dict[$year].$week | WHERE-OBJECT {-not ($lista_pass + $lista_fail).Contains($_)} )}
 			}
 			
@@ -1506,6 +1632,8 @@ function GetList()
 	}
 	if($checkMe1.Checked){write-host "koniec $sciezka1"}
 	#write-host $Result.keys
+	
+	Write-Progress -Completed close
 
 	return ,$Result
 }
@@ -1759,10 +1887,19 @@ function Dzialaj()
 	#zerowanie zmiennej
 	$script:Wynik = [ordered]@{}
 	$listView.Items.Clear()
+
+	$testRok=$textBox1.Text
+	$od_t=$textBox2.Text
+	$do_t=$textBox3.Text
 	
-	foreach($path in (Get-ChildItem $sciezka))
+	foreach($path in (Get-ChildItem $sciezka | WHERE-OBJECT { $_.Name | Select-String -Pattern $myRegxDirectory }))
 	{
-		#write-host $path,$path.LastWriteTime
+		$rok = (get-date $path.LastWriteTime -UFormat %Y)
+		$plik_tydzien = (Get-WeekNumber (get-date $path.LastWriteTime -UFormat "%Y-%m-%d"))
+		#if($debug){write-host $path, (get-date $path.LastWriteTime -UFormat "%Y.%V")}
+
+		write-host $path,$path.LastWriteTime
+
 		if((Get-Item $path.FULLNAME) -is [System.IO.DirectoryInfo])
 		{
 			#wype³nanie tabeli aktualnym statusem pracy
@@ -1800,6 +1937,7 @@ function zapis_konfiguracji()
 	New-ItemProperty -Path $regPath -Name $regToWeek -Value $do_t -Force | Out-Null
 	New-ItemProperty -Path $regPath -Name $name -Value $sciezka -Force | Out-Null
 	New-ItemProperty -Path $regPath -Name $regMyRegxFile -Value $myRegxFile -Force | Out-Null
+	New-ItemProperty -Path $regPath -Name $regMyRegxDirectory -Value $myRegxDirectory -Force | Out-Null
 }
 
 function Odswiez()
@@ -1854,7 +1992,18 @@ function Odswiez()
 				}
 
 				#wype³nanie tabeli
-				$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($modul, $week, $year, $Wynik.$modul.$year.$week["FPY"], $Wynik.$modul.$year.$week["FTT"], $Wynik.$modul.$year.$week["PY"], $Wynik.$modul.$year.$week["sum_moduly"], $Wynik.$modul.$year.$week["sum_pass"], $Wynik.$modul.$year.$week["sum_test"])), -1)
+				$fpy = "--"
+				if( ($Wynik.$modul.$year.$week["FPY"] -ne 0) -and ($Wynik.$modul.$year.$week["FTT"] -gt 9) ) # -and (($Wynik.$modul.$year.$week["FTT"]*2) -gt $Wynik.$modul.$year.$week["sum_moduly"]))
+				{
+					$fpy = [math]::Round(($Wynik.$modul.$year.$week["FPY"] * 100 / $Wynik.$modul.$year.$week["FTT"]))
+				}
+				$py = "--"
+				if( ($Wynik.$modul.$year.$week["PY"] -ne 0) -and ($Wynik.$modul.$year.$week["sum_moduly"] -gt 9) )
+				{
+					$py = [math]::Round(($Wynik.$modul.$year.$week["PY"] * 100 / $Wynik.$modul.$year.$week["sum_moduly"]))
+				}
+				$e = [math]::Round(($Wynik.$modul.$year.$week["sum_test"] / $Wynik.$modul.$year.$week["sum_moduly"]), 2)
+				$ListViewItem = New-Object System.Windows.Forms.ListViewItem([System.String[]](@($modul, $week, $year, $Wynik.$modul.$year.$week["FPY"], $Wynik.$modul.$year.$week["FTT"], $Wynik.$modul.$year.$week["PY"], $Wynik.$modul.$year.$week["sum_moduly"], $Wynik.$modul.$year.$week["sum_pass"], $Wynik.$modul.$year.$week["sum_test"], $fpy, $py, $e)), -1)
 				#$ListViewItem.StateImageIndex = 0
 				$ListView.Items.AddRange([System.Windows.Forms.ListViewItem[]](@($ListViewItem)))
 				#$listView.Refresh()
