@@ -1,3 +1,3 @@
-powershell.exe -ExecutionPolicy Bypass -file "Testy na Pass.ps1"
+powershell.exe -ExecutionPolicy Bypass -file "%~n0.ps1"
 pause
 exit

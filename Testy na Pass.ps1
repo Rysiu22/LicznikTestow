@@ -38,8 +38,9 @@ $ile_lini_czytac = 15
 # 2020.02.16 - 3,5h
 # 2020.02.21 - 4h
 # 2020.09.10 - 5h update do 7K
+# 2020.09.13 - 3.5h naprawiono wczytywanie wzorców z pliku
 
-$title = "Testy na Pass GUI, wersja 7K"
+$title = "Testy na Pass GUI, wersja 7L"
 
 #przechowuje dane pobrane z plików
 $Wynik = [ordered]@{}
@@ -158,7 +159,7 @@ $DropDownGUsers2Dict=@{
 ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers2Dict[$GroupUserKey]
 	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
-	$GroupValue.Text = $GroupUserKey.Substring(2)
+	$GroupValue.Text = $GroupUserKey.Substring($GroupUserKey.IndexOf(" "))
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
 	$UserGMenu2.DropDownItems.Add($GroupValue) | Out-Null
@@ -167,59 +168,27 @@ ForEach ($GroupUserKey in ($DropDownGUsers2Dict.keys | Sort-Object)) {
 }
 
 $DropDownGUsers3Dict=@{
-	'01 Foldery wszystkie: .*' = {
-		$script:myRegxDirectory=".*"; 
-		$label9.Text="wzorzec: ",$myRegxDirectory; 
-		$label9.Refresh();
-		#$Wynik = ObliczPonownie $Wynik; Odswiez;
-		};
-	'02 Folder Wlasny' = {
+	'01 Folder W³asny' = {
 		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxDirectory; 
 		if($tmp){$script:myRegxDirectory=$tmp}; 
-		$label9.Text="wzorzec: ",$myRegxDirectory; 
+		$label9.Text="wzorzec folderu: ",$myRegxDirectory; 
 		$label9.Refresh();
-		#$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
-	'03 Foldery kart kontroli' = {
-		$script:myRegxDirectory="ISA[0-9]+(06|23)-[0-9]+"; 
-		$label9.Text="wzorzec: ",$myRegxDirectory; 
+	'02 Foldery Wszystkie: .*' = {
+		$script:myRegxDirectory=".*"; 
+		$label9.Text="wzorzec folderu: ",$myRegxDirectory; 
 		$label9.Refresh();
-		#$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
-	'22 Wszystko: .*' = {
-		$script:myRegxFile=".*"; 
-		$label8.Text="wzorzec: ",$myRegxFile; 
-		$label8.Refresh();
-		$Wynik = ObliczPonownie $Wynik; Odswiez;
-		};
-	'23 W³asny' = {
+	'51 Modu³y w³asny' = {
 		$tmp=GetStringFromUser "Info" "Podaj w³asny wzorzec" $script:myRegxFile; 
 		if($tmp){$script:myRegxFile=$tmp}; 
-		$label8.Text="wzorzec: ",$myRegxFile; 
+		$label8.Text="wzorzec pliku: ",$myRegxFile; 
 		$label8.Refresh();
 		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
-	"24 Karta: $wzorzec_karty" = {
-		$script:myRegxFile=$wzorzec_karty;
-		$label8.Text="wzorzec: ",$myRegxFile;
-		$label8.Refresh();
-		$Wynik = ObliczPonownie $Wynik; Odswiez;
-		};
-	"25 Wzmacniacz: $wzorzec_wzmacniacza" = {
-		$script:myRegxFile=$wzorzec_wzmacniacza;
-		$label8.Text="wzorzec: ",$myRegxFile; 
-		$label8.Refresh();
-		$Wynik = ObliczPonownie $Wynik; Odswiez;
-		};
-	"26 karty ISA 06 i 23 rok 2020" = {
-		$script:myRegxFile="ISA[0-9]+(06|23)-[0-9]+_B20W[0-9]+S[0-9]+_[0-9]+\.txt";
-		$label8.Text="wzorzec: ",$myRegxFile; 
-		$label8.Refresh();
-		$Wynik = ObliczPonownie $Wynik; Odswiez;
-		};
-	"27 karty ISA 06 i 23 rok:2020 tylko 3 testy" = {
-		$script:myRegxFile="ISA[0-9]+(06|23)-[0-9]+_B20W[0-9]+S[0-9]+_[0-2]+\.txt";
-		$label8.Text="wzorzec: ",$myRegxFile; 
+	'52 Modu³y Wszystkie: .*' = {
+		$script:myRegxFile=".*"; 
+		$label8.Text="wzorzec pliku: ",$myRegxFile; 
 		$label8.Refresh();
 		$Wynik = ObliczPonownie $Wynik; Odswiez;
 		};
@@ -228,24 +197,48 @@ $DropDownGUsers3Dict=@{
 #czyta zawartoœæ pliku z wzorcami i dodaje wzorce do menu
 If([System.IO.File]::Exists($plik_wzorcow))
 {
-'
-	$wzorce = @(GET-CONTENT $plik_wzorcow | ForEach-Object{[Regex]::Escape($_) | Select-String -Pattern ".+=.*" } | ConvertFrom-StringData)
-	$i = 5
+	$wzorce = @(GET-CONTENT $plik_wzorcow | ForEach-Object{[Regex]::Escape($_) | Select-String -Pattern ".+=.+" } | ConvertFrom-StringData)
+	#write-host ($wzorce | Out-String) -ForegroundColor yellow
+	
+	# nr aby  menu by³o uporz¹dkowane
+	$i_folder = 2
+	$i_karta = 52
 	ForEach($key in $wzorce.keys)
 	{
-		#write-host ($key | Out-String)
-		$tmpu = $key
-		$key = ($i++).ToString() +" "+$key+": "+$wzorce.$key
-		$DropDownGUsers3Dict.Add($key, {
-			#write-host ($tmpu | Out-String);
-			$script:myRegxFile=($wzorce.$key | Out-String);
-			$label8.Text="wzorzec: ",($myRegxFile | Out-String);
+		#write-host ($key | Out-String) -ForegroundColor red
+		#write-host ($wzorce.$key | Out-String) -ForegroundColor red
+		
+		function setMyLabel8($arg)
+		{
+			$script:myRegxFile=$arg
+			$label8.Text="wzorzec: ",$script:myRegxFile
 			$label8.Refresh();
 			$Wynik = ObliczPonownie $Wynik; Odswiez;
-			}
-			)
+			#write-host ($arg | Out-String) -ForegroundColor yellow
+		}
+		function setMyLabel9($arg)
+		{
+			$script:myRegxDirectory=$arg;
+			$label9.Text="wzorzec folderu: ",$script:myRegxDirectory;
+			$label9.Refresh();
+			#write-host ($arg | Out-String) -ForegroundColor yellow
+		}
+
+		if( ($key -MATCH "folder") -or ($key -MATCH "foldery") -or ($key -MATCH "katalog") -or ($key -MATCH "katalogi") )
+		{
+			$tmpu = ((++$i_folder).ToString('00') +"  "+($key -replace "\\ ", " "))
+			#write-host ($tmpu | Out-String) -ForegroundColor yellow
+			$DropDownGUsers3Dict.Add($tmpu, [scriptblock]::Create('setMyLabel9 "'+$wzorce.$key+'"') )
+		}
+		else
+		{
+			$tmpu = ((++$i_karta).ToString('00') +"  "+($key -replace "\\ ", " "))
+			#write-host ($tmpu | Out-String) -ForegroundColor yellow
+			$DropDownGUsers3Dict.Add($tmpu, [scriptblock]::Create('setMyLabel8 "'+$wzorce.$key+'"') )
+		}
+		#write-host "+",($DropDownGUsers3Dict.keys | Sort-Object | Select-Object -Last 1)
 	}
-'
+	write-host "Wczytano plik z wzorcami"
 }
 ELSE
 {
@@ -255,11 +248,13 @@ ELSE
 ForEach ($GroupUserKey in ($DropDownGUsers3Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers2Dict[$GroupUserKey]
 	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
-	$GroupValue.Text = $GroupUserKey.Substring(3)
+	$GroupValue.Text = $GroupUserKey.Substring($GroupUserKey.IndexOf(" "))
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
 	$UserGMenu3.DropDownItems.Add($GroupValue) | Out-Null
 	# use name to identify control
+	#write-host ($GroupUserKey | Out-String) -ForegroundColor yellow
+	#write-host ($DropDownGUsers3Dict.$GroupUserKey | Out-String) -ForegroundColor yellow
 	$GroupValue.Add_Click( $DropDownGUsers3Dict[$GroupUserKey] )
 }
 
@@ -270,7 +265,7 @@ $DropDownGUsers4Dict=@{
 ForEach ($GroupUserKey in ($DropDownGUsers4Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers1Dict[$GroupUserKey]
 	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
-	$GroupValue.Text = $GroupUserKey.Substring(2)
+	$GroupValue.Text = $GroupUserKey.Substring($GroupUserKey.IndexOf(" "))
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
 	$UserGMenu4.DropDownItems.Add($GroupValue) | Out-Null
@@ -291,7 +286,7 @@ $DropDownGUsers5Dict=@{
 ForEach ($GroupUserKey in ($DropDownGUsers5Dict.keys | Sort-Object)) {
 	#Write-Host $GroupUserKey, $DropDownGUsers1Dict[$GroupUserKey]
 	$GroupValue = New-Object System.Windows.Forms.ToolStripMenuItem
-	$GroupValue.Text = $GroupUserKey.Substring(2)
+	$GroupValue.Text = $GroupUserKey.Substring($GroupUserKey.IndexOf(" "))
 	# name the control
 	$Groupvalue.Name = $GroupUserKey
 	$UserGMenu5.DropDownItems.Add($GroupValue) | Out-Null
@@ -372,7 +367,8 @@ $form.Controls.Add($label7)
 #8 linia
 $label8=New-Object System.Windows.Forms.label
 $label8.Text="wzorzec pliku: ",$myRegxFile
-$label8.AutoSize=$True
+#$label8.AutoSize=$True
+$label8.Size = New-Object System.Drawing.Size($dlugosc_okna, 26);
 $label8.Top="55"
 $label8.Left=10
 $label8.Anchor="Left,Top"
